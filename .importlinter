@@ -1,0 +1,53 @@
+[importlinter]
+root_package = minidrive
+include_external_packages = False
+
+[importlinter:contract:layers]
+name = Respect des couches de la Clean Architecture
+type = layers
+layers =
+    minidrive.interfaces
+    minidrive.adapters
+    minidrive.application
+    minidrive.domain
+# Les dépendances doivent pointer vers le bas :
+# interfaces/adapters -> application -> domain
+# bootstrap.py est exclu car il est la composition root qui connaît tout
+ignore_imports =
+    minidrive.bootstrap -> minidrive.adapters.memory.folder_repository
+    minidrive.bootstrap -> minidrive.adapters.memory.id_generator
+    minidrive.interfaces.cli -> minidrive.bootstrap
+
+[importlinter:contract:domain_independence]
+name = Le domain ne doit importer aucune autre couche
+type = forbidden
+source_modules =
+    minidrive.domain
+forbidden_modules =
+    minidrive.application
+    minidrive.adapters
+    minidrive.interfaces
+# Le domain doit rester pur : aucune dépendance externe
+
+[importlinter:contract:application_independence]
+name = L'application ne doit pas importer adapters ni interfaces
+type = forbidden
+source_modules =
+    minidrive.application
+forbidden_modules =
+    minidrive.adapters
+    minidrive.interfaces
+# L'application dépend uniquement du domain et définit des ports (ABC)
+
+[importlinter:contract:adapters_interfaces_separation]
+name = Les adapters et interfaces ne doivent pas s'importer mutuellement
+type = independence
+modules =
+    minidrive.adapters
+    minidrive.interfaces
+# Chaque couche externe est indépendante des autres
+# bootstrap.py fait exception car c'est la composition root
+ignore_imports =
+    minidrive.interfaces.cli -> minidrive.bootstrap
+    minidrive.bootstrap -> minidrive.adapters.memory.folder_repository
+    minidrive.bootstrap -> minidrive.adapters.memory.id_generator
