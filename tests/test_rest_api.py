@@ -176,3 +176,110 @@ class TestRestPermissions:
 
         assert status == 200
         assert folders == []
+
+
+class TestRestNodeOps:
+    """Tests REST rename/move/trash/restore/rm/share."""
+
+    def test_rename_folder(self, api: ApiClient) -> None:
+        """PATCH /api/folders/{id} renomme."""
+        _, created = api.request("POST", "/api/folders", {"name": "ancien"})
+        assert isinstance(created, dict)
+
+        status, renamed = api.request("PATCH", f"/api/folders/{created['id']}", {"name": "nouveau"})
+
+        assert status == 200
+        assert isinstance(renamed, dict)
+        assert renamed["name"] == "nouveau"
+
+    def test_rename_wrong_kind_returns_404(self, api: ApiClient) -> None:
+        """Un dossier sous /api/files/{id} doit répondre 404."""
+        _, created = api.request("POST", "/api/folders", {"name": "docs"})
+        assert isinstance(created, dict)
+
+        status, _ = api.request("PATCH", f"/api/files/{created['id']}", {"name": "x"})
+
+        assert status == 404
+
+    def test_move_file(self, api: ApiClient) -> None:
+        """POST /api/files/{id}/move déplace."""
+        _, parent = api.request("POST", "/api/folders", {"name": "parent"})
+        _, created = api.request("POST", "/api/files", {"name": "a.txt", "content_base64": ""})
+        assert isinstance(parent, dict) and isinstance(created, dict)
+
+        status, moved = api.request(
+            "POST", f"/api/files/{created['id']}/move", {"parent_id": parent["id"]}
+        )
+
+        assert status == 200
+        assert isinstance(moved, dict)
+        assert moved["parent_id"] == parent["id"]
+
+    def test_trash_restore_rm_folder(self, api: ApiClient) -> None:
+        """Cycle trash/restore/rm via REST."""
+        _, created = api.request("POST", "/api/folders", {"name": "ephemere"})
+        assert isinstance(created, dict)
+        folder_id = created["id"]
+
+        status, _ = api.request("POST", f"/api/folders/{folder_id}/trash", {})
+        assert status == 200
+        status, folders = api.request("GET", "/api/folders")
+        assert folders == []
+
+        status, _ = api.request("POST", f"/api/folders/{folder_id}/restore", {})
+        assert status == 200
+        status, folders = api.request("GET", "/api/folders")
+        assert isinstance(folders, list) and len(folders) == 1
+
+        status, deleted = api.request("DELETE", f"/api/folders/{folder_id}")
+        assert status == 200
+        assert deleted == {"deleted": folder_id}
+
+    def test_share_unshare_file(self, api: ApiClient) -> None:
+        """Partage puis retrait via REST, effet visible sur le bénéficiaire."""
+        _, created = api.request(
+            "POST", "/api/files", {"name": "a.txt", "content_base64": ""}, user="alice"
+        )
+        assert isinstance(created, dict)
+        file_id = created["id"]
+
+        status, _ = api.request(
+            "POST",
+            f"/api/files/{file_id}/share",
+            {"user": "bob", "role": "reader"},
+            user="alice",
+        )
+        assert status == 200
+        status, files = api.request("GET", "/api/files", user="bob")
+        assert isinstance(files, list) and len(files) == 1
+
+        status, _ = api.request(
+            "POST", f"/api/files/{file_id}/unshare", {"user": "bob"}, user="alice"
+        )
+        assert status == 200
+        status, files = api.request("GET", "/api/files", user="bob")
+        assert files == []
+
+    def test_share_invalid_role_returns_400(self, api: ApiClient) -> None:
+        """Un rôle inconnu doit répondre 400."""
+        _, created = api.request("POST", "/api/folders", {"name": "docs"})
+        assert isinstance(created, dict)
+
+        status, _ = api.request(
+            "POST", f"/api/folders/{created['id']}/share", {"user": "bob", "role": "admin"}
+        )
+
+        assert status == 400
+
+
+class TestWebPage:
+    """La racine sert la GUI."""
+
+    def test_root_serves_html(self, api: ApiClient) -> None:
+        """GET / doit retourner la page Mini-Drive en HTML."""
+        import urllib.request
+
+        with urllib.request.urlopen(api._base_url + "/") as response:
+            assert response.status == 200
+            assert "text/html" in response.headers.get("Content-Type", "")
+            assert "Mini-Drive" in response.read().decode("utf-8")

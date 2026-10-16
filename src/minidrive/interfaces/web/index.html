@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini-Drive</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+  header { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  h1 { font-size: 1.4rem; margin: 0 1rem 0 0; }
+  section { margin-top: 1.5rem; }
+  ul { list-style: none; padding: 0; }
+  li { display: flex; gap: 0.4rem; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid #8884; flex-wrap: wrap; }
+  li .name { font-weight: 600; }
+  li .meta { opacity: 0.65; font-size: 0.85em; }
+  button { cursor: pointer; }
+  #error { color: #c00; min-height: 1.4em; }
+  form { display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap; }
+  input[type=text] { flex: 1; min-width: 8rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mini-Drive</h1>
+  <label>Utilisateur : <input type="text" id="user" value="local" size="10"></label>
+  <button onclick="refresh()">Actualiser</button>
+</header>
+<p id="error" role="alert"></p>
+
+<section>
+  <h2>Dossiers</h2>
+  <ul id="folders"></ul>
+  <form onsubmit="return mkdir(event)">
+    <input type="text" id="new-folder" placeholder="Nouveau dossier" required>
+    <button>Créer</button>
+  </form>
+</section>
+
+<section>
+  <h2>Fichiers</h2>
+  <ul id="files"></ul>
+  <form onsubmit="return upload(event)">
+    <input type="file" id="new-file" required>
+    <button>Uploader</button>
+  </form>
+</section>
+
+<script>
+const user = () => encodeURIComponent(document.getElementById('user').value || 'local');
+const err = (m) => { document.getElementById('error').textContent = m || ''; };
+
+async function api(method, path, body) {
+  err('');
+  const res = await fetch(path + '?user=' + user(), {
+    method,
+    headers: body !== undefined ? {'Content-Type': 'application/json'} : {},
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const ctype = res.headers.get('content-type') || '';
+  const payload = ctype.includes('json') ? await res.json() : await res.blob();
+  if (!res.ok) throw new Error((payload && payload.error) || res.statusText);
+  return payload;
+}
+
+function btn(label, fn) {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.onclick = fn;
+  return b;
+}
+
+async function refresh() {
+  try {
+    const [folders, files] = await Promise.all([
+      api('GET', '/api/folders'), api('GET', '/api/files'),
+    ]);
+    const uf = document.getElementById('folders');
+    uf.innerHTML = '';
+    folders.forEach((f) => uf.appendChild(row(
+      `${f.name}`, `ID ${f.id.slice(0, 8)} · ${f.owner_id}`,
+      [['Renommer', () => renameNode('folders', f)], ['Corbeille', () => trash('folders', f.id)],
+       ['Suppr.', () => rm('folders', f.id)], ['Partager', () => share('folders', f.id)]],
+    )));
+    const uf2 = document.getElementById('files');
+    uf2.innerHTML = '';
+    files.forEach((f) => uf2.appendChild(row(
+      `${f.name}`, `${f.size_bytes} octets · ${f.owner_id}`,
+      [['Télécharger', () => download(f)], ['Renommer', () => renameNode('files', f)],
+       ['Corbeille', () => trash('files', f.id)], ['Suppr.', () => rm('files', f.id)],
+       ['Partager', () => share('files', f.id)]],
+    )));
+  } catch (e) { err(e.message); }
+}
+
+function row(name, meta, actions) {
+  const li = document.createElement('li');
+  const n = document.createElement('span');
+  n.className = 'name';
+  n.textContent = name;
+  const m = document.createElement('span');
+  m.className = 'meta';
+  m.textContent = meta;
+  li.append(n, m);
+  actions.forEach(([label, fn]) => li.appendChild(btn(label, async () => {
+    try { await fn(); await refresh(); } catch (e) { err(e.message); }
+  })));
+  return li;
+}
+
+async function mkdir(e) {
+  e.preventDefault();
+  const input = document.getElementById('new-folder');
+  await api('POST', '/api/folders', {name: input.value});
+  input.value = '';
+  await refresh();
+  return false;
+}
+
+async function upload(e) {
+  e.preventDefault();
+  const input = document.getElementById('new-file');
+  const file = input.files[0];
+  if (!file) return false;
+  const buf = await file.arrayBuffer();
+  let bin = '';
+  new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); });
+  await api('POST', '/api/files', {name: file.name, content_base64: btoa(bin)});
+  input.value = '';
+  await refresh();
+  return false;
+}
+
+async function download(f) {
+  const res = await fetch(`/api/files/${f.id}/content?user=` + user());
+  if (!res.ok) throw new Error((await res.json()).error);
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = f.name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function renameNode(kind, node) {
+  const name = prompt('Nouveau nom :', node.name);
+  if (!name || name === node.name) return;
+  await api('PATCH', `/api/${kind}/${node.id}`, {name});
+}
+
+async function trash(kind, id) {
+  if (!confirm('Mettre à la corbeille ?')) return;
+  await api('POST', `/api/${kind}/${id}/trash`, {});
+}
+
+async function rm(kind, id) {
+  if (!confirm('Supprimer DÉFINITIVEMENT ?')) return;
+  await fetch(`/api/${kind}/${id}?user=` + user(), {method: 'DELETE'});
+  await refresh();
+}
+
+async function share(kind, id) {
+  const target = prompt('Partager avec (utilisateur) :');
+  if (!target) return;
+  const role = prompt('Rôle (reader/editor) :', 'reader');
+  if (!role) return;
+  await api('POST', `/api/${kind}/${id}/share`, {user: target, role});
+}
+
+document.getElementById('user').addEventListener('change', refresh);
+refresh();
+</script>
+</body>
+</html>

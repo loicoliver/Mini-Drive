@@ -93,6 +93,7 @@ minidrive --utilisateur alice mkdir docs-projets
 
 # Démarrer le serveur HTTP (mêmes use cases que la CLI, zéro dépendance)
 minidrive serve --port 8000
+# puis ouvrir http://127.0.0.1:8000/ : interface graphique (listes, CRUD, upload/download, partage)
 ```
 
 ### Tests et qualité
@@ -144,6 +145,7 @@ pytest --cov=minidrive --cov-fail-under=85
 - ✅ Partage (`share` / `unshare`, rôles reader/editor, owner-only)
 - ✅ Permissions effectives (owner tout, editor écrit, reader lit, sinon refusé)
 - ✅ REST API stdlib (`serve`, JSON, mêmes use cases, `?user=`)
+- ✅ Interface graphique web (`/`, vanilla JS, aucune dépendance)
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
 - ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)

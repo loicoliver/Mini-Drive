@@ -99,6 +99,15 @@ class DriveHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_html(self) -> None:
+        """Envoie la page web (GUI Mini-Drive)."""
+        page = (Path(__file__).parent / "web" / "index.html").read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(page)))
+        self.end_headers()
+        self.wfile.write(page)
+
     def _send_bytes(self, data: bytes, filename: str) -> None:
         """Envoie un contenu binaire (download)."""
         self.send_response(200)
@@ -117,13 +126,23 @@ class DriveHandler(BaseHTTPRequestHandler):
         parsed: dict[str, object] = json.loads(raw.decode("utf-8"))
         return parsed
 
+    def _node_kind(self, node_id: str) -> str:
+        """Dossier ou fichier pour un ID (404 si inconnu)."""
+        if self.container.folder_repository.get(node_id) is not None:
+            return "folder"
+        if self.container.file_repository.get(node_id) is not None:
+            return "file"
+        raise UnknownFileError(node_id)
+
     def _route(self) -> None:
         """Dispatche la requête vers le use case adéquat."""
         parsed = urlparse(self.path)
         parts = [part for part in parsed.path.split("/") if part]
         user = self._acting_user()
 
-        if self.command == "GET" and parts == ["api", "health"]:
+        if self.command == "GET" and not parts:
+            self._send_html()
+        elif self.command == "GET" and parts == ["api", "health"]:
             self._send_json(200, {"status": "ok"})
         elif self.command == "GET" and parts == ["api", "folders"]:
             folders = self.container.list_folders.execute(user_id=user)
@@ -160,8 +179,88 @@ class DriveHandler(BaseHTTPRequestHandler):
         ):
             file, data = self.container.download_file.execute(file_id=parts[2], user_id=user)
             self._send_bytes(data, file.name.value)
+        elif len(parts) == 3 and parts[0] == "api" and parts[1] in ("folders", "files"):
+            self._route_node(_singular(parts[1]), parts[2], None, user)
+        elif len(parts) == 4 and parts[0] == "api" and parts[1] in ("folders", "files"):
+            self._route_node(_singular(parts[1]), parts[2], parts[3], user)
         else:
             self._send_json(404, {"error": f"route inconnue : {self.command} {parsed.path}"})
+
+    def _route_node(self, kind: str, node_id: str, action: str | None, user: str) -> None:
+        """Opérations sur un dossier/fichier : rename/move/trash/restore/rm/share."""
+        # Le kind de l'URL doit correspondre au type réel (anti-confusion)
+        if self._node_kind(node_id) != kind:
+            raise UnknownFileError(node_id)
+        is_folder = kind == "folder"
+        body = self._read_json() if self.command in ("PATCH", "POST") else {}
+
+        if self.command == "PATCH" and action is None:
+            new_name = str(body.get("name", ""))
+            if is_folder:
+                folder = self.container.rename_folder.execute(
+                    folder_id=node_id, new_name=new_name, user_id=user
+                )
+                self._send_json(200, folder_to_json(folder))
+            else:
+                file = self.container.rename_file.execute(
+                    file_id=node_id, new_name=new_name, user_id=user
+                )
+                self._send_json(200, file_to_json(file))
+        elif self.command == "POST" and action == "move":
+            parent_id = _optional_str(body.get("parent_id"))
+            if is_folder:
+                folder = self.container.move_folder.execute(
+                    folder_id=node_id, new_parent_id=parent_id, user_id=user
+                )
+                self._send_json(200, folder_to_json(folder))
+            else:
+                file = self.container.move_file.execute(
+                    file_id=node_id, new_parent_id=parent_id, user_id=user
+                )
+                self._send_json(200, file_to_json(file))
+        elif self.command == "POST" and action == "trash":
+            if is_folder:
+                folder = self.container.trash_folder.execute(folder_id=node_id, user_id=user)
+                self._send_json(200, folder_to_json(folder))
+            else:
+                file = self.container.trash_file.execute(file_id=node_id, user_id=user)
+                self._send_json(200, file_to_json(file))
+        elif self.command == "POST" and action == "restore":
+            if is_folder:
+                folder = self.container.restore_folder.execute(folder_id=node_id, user_id=user)
+                self._send_json(200, folder_to_json(folder))
+            else:
+                file = self.container.restore_file.execute(file_id=node_id, user_id=user)
+                self._send_json(200, file_to_json(file))
+        elif self.command == "DELETE" and action is None:
+            if is_folder:
+                self.container.purge_folder.execute(folder_id=node_id, user_id=user)
+            else:
+                self.container.purge_file.execute(file_id=node_id, user_id=user)
+            self._send_json(200, {"deleted": node_id})
+        elif self.command == "POST" and action == "share":
+            target = str(body.get("user", ""))
+            role = str(body.get("role", ""))
+            if is_folder:
+                self.container.share_folder.execute(
+                    folder_id=node_id, user_id=target, role=role, owner_id=user
+                )
+            else:
+                self.container.share_file.execute(
+                    file_id=node_id, user_id=target, role=role, owner_id=user
+                )
+            self._send_json(200, {"shared": node_id, "user": target, "role": role})
+        elif self.command == "POST" and action == "unshare":
+            target = str(body.get("user", ""))
+            if is_folder:
+                self.container.unshare_folder.execute(
+                    folder_id=node_id, user_id=target, owner_id=user
+                )
+            else:
+                self.container.unshare_file.execute(file_id=node_id, user_id=target, owner_id=user)
+            self._send_json(200, {"unshared": node_id, "user": target})
+        else:
+            self._send_json(404, {"error": f"route inconnue : {self.command} {self.path}"})
 
     def _handle(self) -> None:
         """Point d'entrée avec mapping d'erreurs."""
@@ -184,6 +283,14 @@ class DriveHandler(BaseHTTPRequestHandler):
         """Route POST."""
         self._handle()
 
+    def do_PATCH(self) -> None:
+        """Route PATCH (rename)."""
+        self._handle()
+
+    def do_DELETE(self) -> None:
+        """Route DELETE (purge)."""
+        self._handle()
+
 
 def _optional_str(value: object) -> str | None:
     """Normalise un champ JSON optionnel (None ou str)."""
@@ -191,6 +298,11 @@ def _optional_str(value: object) -> str | None:
         return None
     text = str(value)
     return text if text else None
+
+
+def _singular(collection: str) -> str:
+    """Pluriel d'URL (-> folders/files) vers node_type (-> folder/file)."""
+    return {"folders": "folder", "files": "file"}[collection]
 
 
 def build_server(db_path: Path | str | None = None, port: int = 0) -> ThreadingHTTPServer:
