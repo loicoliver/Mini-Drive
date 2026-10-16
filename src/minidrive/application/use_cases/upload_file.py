@@ -2,11 +2,10 @@
 
 from minidrive.application.ports import BlobStorage, FileRepository, IdGenerator
 from minidrive.application.quota_policies import QuotaPolicy
+from minidrive.application.users import DEFAULT_USER_ID
 from minidrive.domain.entities import File
 from minidrive.domain.errors import FileAlreadyExistsError, QuotaExceededError
 from minidrive.domain.value_objects import FileName, FileSize
-
-DEFAULT_USER_ID = "local"
 
 
 class UploadFile:
@@ -74,9 +73,11 @@ class UploadFile:
         if not self._quota_policy.can_upload(user_id, file_size.value):
             raise QuotaExceededError(user_id, file_size.value)
 
-        # Création du fichier (factory method)
+        # Création du fichier (factory method, propriétaire = uploader)
         file_id = self._id_generator.generate()
-        file = File.create(id=file_id, name=file_name, size=file_size, parent_id=parent_id)
+        file = File.create(
+            id=file_id, name=file_name, size=file_size, parent_id=parent_id, owner_id=user_id
+        )
 
         # Persistance : contenu puis métadonnées, puis décompte du quota
         self._blob_storage.write(file_id, data)

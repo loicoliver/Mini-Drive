@@ -74,6 +74,23 @@ class InTrashError(DomainError):
         super().__init__(f"Opération impossible : '{node_id}' est dans la corbeille")
 
 
+class InvalidShareError(DomainError):
+    """Partage invalide (rôle inconnu ou opération interdite)."""
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(f"Partage invalide : {reason}")
+
+
+class PermissionDeniedError(DomainError):
+    """L'utilisateur n'a pas la permission pour cette opération."""
+
+    def __init__(self, user_id: str, node_id: str) -> None:
+        self.user_id = user_id
+        self.node_id = node_id
+        super().__init__(f"Permission refusée pour '{user_id}' sur '{node_id}'")
+
+
 class InvalidMoveError(DomainError):
     """Déplacement impossible (sur soi-même ou dans un descendant)."""
 

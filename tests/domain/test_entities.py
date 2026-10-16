@@ -54,3 +54,17 @@ class TestFile:
         file = File.create(id="f2", name=FileName("photo.jpg"), size=FileSize(512), parent_id="123")
 
         assert file.parent_id == "123"
+
+    def test_owner_defaults_to_local(self) -> None:
+        """Sans propriétaire explicite, le owner est l'utilisateur local."""
+        folder = Folder.create(id="d", name=FileName("docs"))
+        file = File.create(id="f", name=FileName("a.txt"), size=FileSize(1))
+
+        assert folder.owner_id == "local"
+        assert file.owner_id == "local"
+
+    def test_owner_explicit(self) -> None:
+        """Le propriétaire peut être fixé à la création."""
+        folder = Folder.create(id="d", name=FileName("docs"), owner_id="alice")
+
+        assert folder.owner_id == "alice"

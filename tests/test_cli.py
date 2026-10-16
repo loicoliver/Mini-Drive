@@ -339,6 +339,49 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "ID inconnu" in captured.out
 
+    def test_share_and_unshare(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """share puis unshare par le propriétaire."""
+        main(["mkdir", "docs"])
+        capsys.readouterr()
+        main(["ls"])
+        folder_id = capsys.readouterr().out.split("ID: ")[1].split(")")[0]
+        capsys.readouterr()
+
+        main(["share", folder_id, "bob", "reader"])
+        assert "Partagé avec 'bob' (reader)" in capsys.readouterr().out
+
+        main(["unshare", folder_id, "bob"])
+        assert "Partage retiré pour 'bob'" in capsys.readouterr().out
+
+    def test_share_invalid_role(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """share avec un rôle inconnu doit échouer en code 1."""
+        main(["mkdir", "docs"])
+        capsys.readouterr()
+        main(["ls"])
+        folder_id = capsys.readouterr().out.split("ID: ")[1].split(")")[0]
+        capsys.readouterr()
+
+        with pytest.raises(SystemExit) as exc_info:
+            main(["share", folder_id, "bob", "admin"])
+
+        assert exc_info.value.code == 1
+        assert "Partage invalide" in capsys.readouterr().out
+
+    def test_utilisateur_flag_sets_owner(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """--utilisateur définit le propriétaire des créations."""
+        main(["--utilisateur", "alice", "mkdir", "docs"])
+
+        assert "créé avec succès" in capsys.readouterr().out
+
+    def test_env_user_used_by_default(
+        self, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sans flag, MINIDRIVE_USER est utilisé (isolation DB préservée)."""
+        monkeypatch.setenv("MINIDRIVE_USER", "carol")
+        main(["mkdir", "docs"])
+
+        assert "créé avec succès" in capsys.readouterr().out
+
     def test_help_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
         """-h / --help doit afficher l'aide et sortir en code 0."""
         with pytest.raises(SystemExit) as exc_info:

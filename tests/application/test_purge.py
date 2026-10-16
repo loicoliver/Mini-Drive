@@ -6,12 +6,14 @@ from minidrive.adapters.memory.blob_storage import InMemoryBlobStorage
 from minidrive.adapters.memory.file_repository import InMemoryFileRepository
 from minidrive.adapters.memory.folder_repository import InMemoryFolderRepository
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
+from minidrive.adapters.memory.share_repository import InMemoryShareRepository
 from minidrive.application.quota_policies import FixedQuotaPolicy
 from minidrive.application.use_cases.create_folder import CreateFolder
 from minidrive.application.use_cases.purge_file import PurgeFile
 from minidrive.application.use_cases.purge_folder import PurgeFolder
 from minidrive.application.use_cases.trash_folder import TrashFolder
-from minidrive.application.use_cases.upload_file import DEFAULT_USER_ID, UploadFile
+from minidrive.application.use_cases.upload_file import UploadFile
+from minidrive.application.users import DEFAULT_USER_ID
 from minidrive.domain.errors import UnknownFileError, UnknownFolderError
 
 
@@ -30,6 +32,7 @@ def purge_setup() -> tuple[
     folder_repository = InMemoryFolderRepository()
     file_repository = InMemoryFileRepository()
     blob_storage = InMemoryBlobStorage()
+    share_repository = InMemoryShareRepository()
     policy = FixedQuotaPolicy(quota_bytes=1000)
     return (
         PurgeFolder(
@@ -37,11 +40,13 @@ def purge_setup() -> tuple[
             file_repository=file_repository,
             blob_storage=blob_storage,
             quota_policy=policy,
+            share_repository=share_repository,
         ),
         PurgeFile(
             file_repository=file_repository,
             blob_storage=blob_storage,
             quota_policy=policy,
+            share_repository=share_repository,
         ),
         CreateFolder(folder_repository=folder_repository, id_generator=UuidIdGenerator()),
         UploadFile(

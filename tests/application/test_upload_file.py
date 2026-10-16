@@ -10,7 +10,8 @@ from minidrive.application.quota_policies import (
     QuotaPolicy,
     UnlimitedQuotaPolicy,
 )
-from minidrive.application.use_cases.upload_file import DEFAULT_USER_ID, UploadFile
+from minidrive.application.use_cases.upload_file import UploadFile
+from minidrive.application.users import DEFAULT_USER_ID
 from minidrive.domain.errors import (
     FileAlreadyExistsError,
     InvalidFileNameError,

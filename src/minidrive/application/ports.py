@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from minidrive.domain.entities import File, Folder
+from minidrive.domain.entities import File, Folder, Share
 
 
 class FolderRepository(ABC):
@@ -187,5 +187,53 @@ class BlobStorage(ABC):
 
         Args:
             file_id: Identifiant unique du fichier
+        """
+        pass
+
+
+class ShareRepository(ABC):
+    """Port pour la persistance des partages (qui peut voir/éditer quoi)."""
+
+    @abstractmethod
+    def grant(self, share: Share) -> None:
+        """Accorde (ou met à jour) un partage (upsert).
+
+        Args:
+            share: Le partage à persister
+        """
+        pass
+
+    @abstractmethod
+    def revoke(self, node_type: str, node_id: str, user_id: str) -> None:
+        """Retire un partage (aucune erreur si absent).
+
+        Args:
+            node_type: "folder" ou "file"
+            node_id: Identifiant du dossier ou fichier
+            user_id: Identifiant de l'utilisateur
+        """
+        pass
+
+    @abstractmethod
+    def role_for(self, node_type: str, node_id: str, user_id: str) -> str | None:
+        """Retourne le rôle accordé ("reader"/"editor"), ou None si aucun.
+
+        Args:
+            node_type: "folder" ou "file"
+            node_id: Identifiant du dossier ou fichier
+            user_id: Identifiant de l'utilisateur
+
+        Returns:
+            Le rôle, ou None
+        """
+        pass
+
+    @abstractmethod
+    def delete_for_node(self, node_type: str, node_id: str) -> None:
+        """Supprime tous les partages d'un nœud (purge).
+
+        Args:
+            node_type: "folder" ou "file"
+            node_id: Identifiant du dossier ou fichier
         """
         pass

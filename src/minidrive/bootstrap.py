@@ -11,6 +11,7 @@ from minidrive.adapters.filesystem.blob_storage import FilesystemBlobStorage
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
 from minidrive.adapters.sqlite.file_repository import SqliteFileRepository
 from minidrive.adapters.sqlite.folder_repository import SqliteFolderRepository
+from minidrive.adapters.sqlite.share_repository import SqliteShareRepository
 from minidrive.application.ports import FileRepository, FolderRepository
 from minidrive.application.quota_policies import QuotaPolicy, UnlimitedQuotaPolicy
 from minidrive.application.use_cases.create_folder import CreateFolder
@@ -23,6 +24,8 @@ from minidrive.application.use_cases.purge_file import PurgeFile
 from minidrive.application.use_cases.purge_folder import PurgeFolder
 from minidrive.application.use_cases.rename_file import RenameFile
 from minidrive.application.use_cases.rename_folder import RenameFolder
+from minidrive.application.use_cases.share_file import ShareFile, UnshareFile
+from minidrive.application.use_cases.share_folder import ShareFolder, UnshareFolder
 from minidrive.application.use_cases.trash_file import RestoreFile, TrashFile
 from minidrive.application.use_cases.trash_folder import RestoreFolder, TrashFolder
 from minidrive.application.use_cases.upload_file import UploadFile
@@ -60,6 +63,7 @@ class Container:
         # Adapteurs (implémentations concrètes)
         self._folder_repository = SqliteFolderRepository(self._db_path)
         self._file_repository = SqliteFileRepository(self._db_path)
+        self._share_repository = SqliteShareRepository(self._db_path)
         self._blob_storage = FilesystemBlobStorage(self._db_path.parent / "blobs")
         self._id_generator = UuidIdGenerator()
         self._quota_policy = quota_policy or UnlimitedQuotaPolicy()
@@ -115,11 +119,29 @@ class Container:
             file_repository=self._file_repository,
             blob_storage=self._blob_storage,
             quota_policy=self._quota_policy,
+            share_repository=self._share_repository,
         )
         self._purge_file_use_case = PurgeFile(
             file_repository=self._file_repository,
             blob_storage=self._blob_storage,
             quota_policy=self._quota_policy,
+            share_repository=self._share_repository,
+        )
+        self._share_folder_use_case = ShareFolder(
+            folder_repository=self._folder_repository,
+            share_repository=self._share_repository,
+        )
+        self._unshare_folder_use_case = UnshareFolder(
+            folder_repository=self._folder_repository,
+            share_repository=self._share_repository,
+        )
+        self._share_file_use_case = ShareFile(
+            file_repository=self._file_repository,
+            share_repository=self._share_repository,
+        )
+        self._unshare_file_use_case = UnshareFile(
+            file_repository=self._file_repository,
+            share_repository=self._share_repository,
         )
 
     @property
@@ -211,6 +233,26 @@ class Container:
     def purge_file(self) -> PurgeFile:
         """Accès au use case PurgeFile."""
         return self._purge_file_use_case
+
+    @property
+    def share_folder(self) -> ShareFolder:
+        """Accès au use case ShareFolder."""
+        return self._share_folder_use_case
+
+    @property
+    def unshare_folder(self) -> UnshareFolder:
+        """Accès au use case UnshareFolder."""
+        return self._unshare_folder_use_case
+
+    @property
+    def share_file(self) -> ShareFile:
+        """Accès au use case ShareFile."""
+        return self._share_file_use_case
+
+    @property
+    def unshare_file(self) -> UnshareFile:
+        """Accès au use case UnshareFile."""
+        return self._unshare_file_use_case
 
 
 def create_container(

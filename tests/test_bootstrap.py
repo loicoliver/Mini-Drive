@@ -97,6 +97,20 @@ class TestBootstrap:
         assert container.restore_file is not None
         assert container.purge_file is not None
 
+    def test_container_provides_sharing(self, tmp_path: Path) -> None:
+        """Le conteneur doit fournir share/unshare câblés sur les mêmes repos."""
+        container = create_container(db_path=tmp_path / "test.db")
+        folder = container.create_folder.execute("dossier", owner_id="alice")
+
+        share = container.share_folder.execute(
+            folder_id=folder.id, user_id="bob", role="reader", owner_id="alice"
+        )
+        assert share.role == "reader"
+
+        container.unshare_folder.execute(folder_id=folder.id, user_id="bob", owner_id="alice")
+        assert container.share_file is not None
+        assert container.unshare_file is not None
+
     def test_create_folder_is_wired_correctly(self, tmp_path: Path) -> None:
         """Le use case CreateFolder doit être câblé avec les dépendances."""
         container = create_container(db_path=tmp_path / "test.db")

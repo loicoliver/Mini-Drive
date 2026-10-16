@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS folders (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     parent_id TEXT,
-    trashed INTEGER NOT NULL DEFAULT 0
+    trashed INTEGER NOT NULL DEFAULT 0,
+    owner_id TEXT NOT NULL DEFAULT 'local'
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_folders_name_parent
     ON folders (name, parent_id);
@@ -46,22 +47,30 @@ class SqliteFolderRepository(FolderRepository):
         self._db_path = Path(db_path)
         with connect(self._db_path) as connection:
             connection.executescript(_SCHEMA)
-        # Migration des .db créés avant la corbeille (colonne absente)
+        # Migrations des .db créés avant ces colonnes (colonnes absentes)
         ensure_column(self._db_path, "folders", "trashed", "INTEGER NOT NULL DEFAULT 0")
+        ensure_column(self._db_path, "folders", "owner_id", "TEXT NOT NULL DEFAULT 'local'")
 
     def add(self, folder: Folder) -> None:
         """Ajoute un dossier au repository."""
         with connect(self._db_path) as connection:
             connection.execute(
-                "INSERT INTO folders (id, name, parent_id, trashed) VALUES (?, ?, ?, ?)",
-                (folder.id, folder.name.value, folder.parent_id, int(folder.trashed)),
+                "INSERT INTO folders (id, name, parent_id, trashed, owner_id)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (
+                    folder.id,
+                    folder.name.value,
+                    folder.parent_id,
+                    int(folder.trashed),
+                    folder.owner_id,
+                ),
             )
 
     def get(self, folder_id: str) -> Folder | None:
         """Récupère un dossier par son identifiant (corbeille incluse)."""
         with connect(self._db_path) as connection:
             row = connection.execute(
-                "SELECT id, name, parent_id, trashed FROM folders WHERE id = ?",
+                "SELECT id, name, parent_id, trashed, owner_id FROM folders WHERE id = ?",
                 (folder_id,),
             ).fetchone()
         if row is None:
@@ -70,8 +79,13 @@ class SqliteFolderRepository(FolderRepository):
         found_name: str = row[1]
         found_parent_id: str | None = row[2]
         found_trashed: bool = bool(row[3])
+        found_owner: str = row[4]
         return Folder.create(
-            id=found_id, name=FileName(found_name), parent_id=found_parent_id, trashed=found_trashed
+            id=found_id,
+            name=FileName(found_name),
+            parent_id=found_parent_id,
+            trashed=found_trashed,
+            owner_id=found_owner,
         )
 
     def exists_with_name(self, name: str, parent_id: str | None) -> bool:
@@ -85,7 +99,7 @@ class SqliteFolderRepository(FolderRepository):
 
     def list_all(self, include_trashed: bool = False) -> list[Folder]:
         """Liste les dossiers NON corbeillés, triés par nom."""
-        query = "SELECT id, name, parent_id, trashed FROM folders"
+        query = "SELECT id, name, parent_id, trashed, owner_id FROM folders"
         if not include_trashed:
             query += " WHERE trashed = 0"
         query += " ORDER BY name"
@@ -97,12 +111,14 @@ class SqliteFolderRepository(FolderRepository):
             folder_name: str = row[1]
             folder_parent_id: str | None = row[2]
             folder_trashed: bool = bool(row[3])
+            folder_owner: str = row[4]
             folders.append(
                 Folder.create(
                     id=folder_id,
                     name=FileName(folder_name),
                     parent_id=folder_parent_id,
                     trashed=folder_trashed,
+                    owner_id=folder_owner,
                 )
             )
         return folders
@@ -111,8 +127,15 @@ class SqliteFolderRepository(FolderRepository):
         """Crée ou remplace un dossier (upsert par identifiant)."""
         with connect(self._db_path) as connection:
             connection.execute(
-                "INSERT OR REPLACE INTO folders (id, name, parent_id, trashed) VALUES (?, ?, ?, ?)",
-                (folder.id, folder.name.value, folder.parent_id, int(folder.trashed)),
+                "INSERT OR REPLACE INTO folders (id, name, parent_id, trashed, owner_id)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (
+                    folder.id,
+                    folder.name.value,
+                    folder.parent_id,
+                    int(folder.trashed),
+                    folder.owner_id,
+                ),
             )
 
     def delete(self, folder_id: str) -> None:

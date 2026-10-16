@@ -2,11 +2,20 @@
 
 import argparse
 import contextlib
+import os
 import sys
 from pathlib import Path
 
+from minidrive.application.users import DEFAULT_USER_ID
 from minidrive.bootstrap import Container, create_container
 from minidrive.domain.errors import DomainError
+
+
+def _current_user(args: argparse.Namespace) -> str:
+    """Utilisateur agissant : --utilisateur, sinon MINIDRIVE_USER, sinon local."""
+    if getattr(args, "acting_user", None):
+        return str(args.acting_user)
+    return os.environ.get("MINIDRIVE_USER", DEFAULT_USER_ID)
 
 
 def _resolve_node_kind(container: Container, node_id: str) -> str:
@@ -42,6 +51,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="minidrive",
         description="Clone simplifié de Google Drive (démo Clean Architecture).",
+    )
+    parser.add_argument(
+        "--utilisateur",
+        dest="acting_user",
+        default=None,
+        help="Utilisateur agissant (défaut : $MINIDRIVE_USER ou 'local')",
     )
     subparsers = parser.add_subparsers(dest="command", metavar="<commande>")
 
@@ -117,6 +132,23 @@ def build_parser() -> argparse.ArgumentParser:
         description="Supprimer définitivement un dossier (récursif) ou un fichier.",
     )
     rm_parser.add_argument("id", help="Identifiant du dossier ou fichier")
+
+    share_parser = subparsers.add_parser(
+        "share",
+        help="Partager avec un utilisateur",
+        description="Partager un dossier ou un fichier (rôle reader ou editor).",
+    )
+    share_parser.add_argument("id", help="Identifiant du dossier ou fichier")
+    share_parser.add_argument("utilisateur", help="Utilisateur bénéficiaire")
+    share_parser.add_argument("role", help="Rôle : reader ou editor")
+
+    unshare_parser = subparsers.add_parser(
+        "unshare",
+        help="Retirer un partage",
+        description="Retirer un utilisateur d'un dossier ou fichier partagé.",
+    )
+    unshare_parser.add_argument("id", help="Identifiant du dossier ou fichier")
+    unshare_parser.add_argument("utilisateur", help="Utilisateur à retirer")
     return parser
 
 
@@ -138,9 +170,10 @@ def main(argv: list[str] | None = None) -> None:
     container = create_container()
 
     try:
+        acting_user = _current_user(args)
         if args.command == "mkdir":
             folder_name: str = str(args.nom)
-            folder = container.create_folder.execute(name=folder_name)
+            folder = container.create_folder.execute(name=folder_name, owner_id=acting_user)
             print(f"✓ Dossier '{folder.name}' créé avec succès (ID: {folder.id})")
         elif args.command == "ls":
             folders = container.list_folders.execute()
@@ -162,7 +195,7 @@ def main(argv: list[str] | None = None) -> None:
                 print(f"✗ Erreur: fichier introuvable '{source}'")
                 sys.exit(1)
             data = source.read_bytes()
-            file = container.upload_file.execute(name=source.name, data=data)
+            file = container.upload_file.execute(name=source.name, data=data, user_id=acting_user)
             print(f"✓ Fichier '{file.name}' uploadé ({file.size}, ID: {file.id})")
         elif args.command == "download":
             file_id: str = str(args.id)
@@ -220,6 +253,31 @@ def main(argv: list[str] | None = None) -> None:
             else:
                 container.purge_file.execute(file_id=node_id)
             print(f"✓ '{node_id}' supprimé définitivement")
+        elif args.command == "share":
+            node_id = str(args.id)
+            target_user: str = str(args.utilisateur)
+            role: str = str(args.role)
+            if _resolve_node_kind(container, node_id) == "folder":
+                container.share_folder.execute(
+                    folder_id=node_id, user_id=target_user, role=role, owner_id=acting_user
+                )
+            else:
+                container.share_file.execute(
+                    file_id=node_id, user_id=target_user, role=role, owner_id=acting_user
+                )
+            print(f"✓ Partagé avec '{target_user}' ({role})")
+        elif args.command == "unshare":
+            node_id = str(args.id)
+            target_user = str(args.utilisateur)
+            if _resolve_node_kind(container, node_id) == "folder":
+                container.unshare_folder.execute(
+                    folder_id=node_id, user_id=target_user, owner_id=acting_user
+                )
+            else:
+                container.unshare_file.execute(
+                    file_id=node_id, user_id=target_user, owner_id=acting_user
+                )
+            print(f"✓ Partage retiré pour '{target_user}'")
         else:  # Sécurité : argparse rejette déjà les commandes inconnues (exit 2)
             print(f"Commande inconnue: {args.command}")
             sys.exit(1)

@@ -1,9 +1,14 @@
 """Use case pour purger définitivement un dossier (pattern Use Case / Command)."""
 
 from minidrive.application.folder_tree import descendant_ids
-from minidrive.application.ports import BlobStorage, FileRepository, FolderRepository
+from minidrive.application.ports import (
+    BlobStorage,
+    FileRepository,
+    FolderRepository,
+    ShareRepository,
+)
 from minidrive.application.quota_policies import QuotaPolicy
-from minidrive.application.use_cases.upload_file import DEFAULT_USER_ID
+from minidrive.application.users import DEFAULT_USER_ID
 from minidrive.domain.errors import UnknownFolderError
 
 
@@ -20,6 +25,7 @@ class PurgeFolder:
         file_repository: FileRepository,
         blob_storage: BlobStorage,
         quota_policy: QuotaPolicy,
+        share_repository: ShareRepository,
     ) -> None:
         """Injection de dépendances par constructeur.
 
@@ -28,11 +34,13 @@ class PurgeFolder:
             file_repository: Port pour la persistance des métadonnées
             blob_storage: Port pour le stockage du contenu binaire
             quota_policy: Politique de quota (libération au purge)
+            share_repository: Port des partages (nettoyés au purge)
         """
         self._folder_repository = folder_repository
         self._file_repository = file_repository
         self._blob_storage = blob_storage
         self._quota_policy = quota_policy
+        self._share_repository = share_repository
 
     def execute(self, folder_id: str, user_id: str = DEFAULT_USER_ID) -> None:
         """Purge un dossier, ses sous-dossiers et leurs fichiers.
@@ -56,6 +64,8 @@ class PurgeFolder:
                 self._blob_storage.delete(file.id)
                 self._file_repository.delete(file.id)
                 self._quota_policy.record_removal(user_id, file.size.value)
+                self._share_repository.delete_for_node("file", file.id)
 
         for doomed_id in doomed_folders:
             self._folder_repository.delete(doomed_id)
+            self._share_repository.delete_for_node("folder", doomed_id)

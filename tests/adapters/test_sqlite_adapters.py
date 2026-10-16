@@ -63,6 +63,7 @@ class TestSqliteFolderRepository:
         assert retrieved is not None
         assert retrieved.name.value == "docs"
         assert retrieved.trashed is False
+        assert retrieved.owner_id == "local"
 
     def test_ensure_column_is_idempotent(self, tmp_path: Path) -> None:
         """ensure_column sur une colonne existante ne doit rien changer."""

@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS files (
     name TEXT NOT NULL,
     parent_id TEXT,
     size_bytes INTEGER NOT NULL,
-    trashed INTEGER NOT NULL DEFAULT 0
+    trashed INTEGER NOT NULL DEFAULT 0,
+    owner_id TEXT NOT NULL DEFAULT 'local'
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_files_name_parent
     ON files (name, parent_id);
@@ -34,23 +35,31 @@ class SqliteFileRepository(FileRepository):
         self._db_path = Path(db_path)
         with connect(self._db_path) as connection:
             connection.executescript(_SCHEMA)
-        # Migration des .db créés avant la corbeille (colonne absente)
+        # Migrations des .db créés avant ces colonnes (colonnes absentes)
         ensure_column(self._db_path, "files", "trashed", "INTEGER NOT NULL DEFAULT 0")
+        ensure_column(self._db_path, "files", "owner_id", "TEXT NOT NULL DEFAULT 'local'")
 
     def add(self, file: File) -> None:
         """Ajoute un fichier au repository."""
         with connect(self._db_path) as connection:
             connection.execute(
-                "INSERT INTO files (id, name, parent_id, size_bytes, trashed)"
-                " VALUES (?, ?, ?, ?, ?)",
-                (file.id, file.name.value, file.parent_id, file.size.value, int(file.trashed)),
+                "INSERT INTO files (id, name, parent_id, size_bytes, trashed, owner_id)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    file.id,
+                    file.name.value,
+                    file.parent_id,
+                    file.size.value,
+                    int(file.trashed),
+                    file.owner_id,
+                ),
             )
 
     def get(self, file_id: str) -> File | None:
         """Récupère un fichier par son identifiant (corbeille incluse)."""
         with connect(self._db_path) as connection:
             row = connection.execute(
-                "SELECT id, name, parent_id, size_bytes, trashed FROM files WHERE id = ?",
+                "SELECT id, name, parent_id, size_bytes, trashed, owner_id FROM files WHERE id = ?",
                 (file_id,),
             ).fetchone()
         if row is None:
@@ -60,12 +69,14 @@ class SqliteFileRepository(FileRepository):
         found_parent_id: str | None = row[2]
         found_size: int = row[3]
         found_trashed: bool = bool(row[4])
+        found_owner: str = row[5]
         return File.create(
             id=found_id,
             name=FileName(found_name),
             size=FileSize(found_size),
             parent_id=found_parent_id,
             trashed=found_trashed,
+            owner_id=found_owner,
         )
 
     def exists_with_name(self, name: str, parent_id: str | None) -> bool:
@@ -79,7 +90,7 @@ class SqliteFileRepository(FileRepository):
 
     def list_all(self, include_trashed: bool = False) -> list[File]:
         """Liste les fichiers NON corbeillés, triés par nom."""
-        query = "SELECT id, name, parent_id, size_bytes, trashed FROM files"
+        query = "SELECT id, name, parent_id, size_bytes, trashed, owner_id FROM files"
         if not include_trashed:
             query += " WHERE trashed = 0"
         query += " ORDER BY name"
@@ -92,6 +103,7 @@ class SqliteFileRepository(FileRepository):
             file_parent_id: str | None = row[2]
             file_size: int = row[3]
             file_trashed: bool = bool(row[4])
+            file_owner: str = row[5]
             files.append(
                 File.create(
                     id=file_id,
@@ -99,6 +111,7 @@ class SqliteFileRepository(FileRepository):
                     size=FileSize(file_size),
                     parent_id=file_parent_id,
                     trashed=file_trashed,
+                    owner_id=file_owner,
                 )
             )
         return files
@@ -107,14 +120,16 @@ class SqliteFileRepository(FileRepository):
         """Crée ou remplace un fichier (upsert par identifiant)."""
         with connect(self._db_path) as connection:
             connection.execute(
-                "INSERT OR REPLACE INTO files (id, name, parent_id, size_bytes, trashed)"
-                " VALUES (?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO files"
+                " (id, name, parent_id, size_bytes, trashed, owner_id)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     file.id,
                     file.name.value,
                     file.parent_id,
                     file.size.value,
                     int(file.trashed),
+                    file.owner_id,
                 ),
             )
 

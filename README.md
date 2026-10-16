@@ -78,6 +78,14 @@ minidrive move <id> --vers <dossier-id>
 minidrive trash <id>
 minidrive restore <id>
 minidrive rm <id>
+
+# Partage (rôle reader ou editor, seul le propriétaire partage)
+minidrive share <id> bob reader
+minidrive unshare <id> bob
+
+# Agir en tant qu'un autre utilisateur
+minidrive --utilisateur alice mkdir docs-projets
+# ou : MINIDRIVE_USER=alice minidrive mkdir docs-projets
 ```
 
 ### Tests et qualité
@@ -125,13 +133,15 @@ pytest --cov=minidrive --cov-fail-under=85
 - ✅ Déplacer (`minidrive move <id> [--vers <dossier-id>]`, garde anti-cycle)
 - ✅ Corbeille (`trash` / `restore`, cascade, reversible)
 - ✅ Suppression définitive (`rm`, récursive, blobs + quota libérés)
+- ✅ Propriétaires (`owner_id`, `--utilisateur` / `MINIDRIVE_USER`)
+- ✅ Partage (`share` / `unshare`, rôles reader/editor, owner-only)
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
 - ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)
 - ✅ Quotas branchés sur l'upload (mono-utilisateur `local`, `UnlimitedQuotaPolicy` par défaut)
 
 **Fonctionnalités prévues (MVP ultérieur)** :
-- Partager (lecteur/éditeur)
+- Permissions effectives (enforcement lecteur/éditeur à chaque opération)
 - Gestion des quotas par utilisateur
 
 ## 🧪 Tests
