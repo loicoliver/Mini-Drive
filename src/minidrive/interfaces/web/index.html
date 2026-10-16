@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini-Drive</title>
+  <title>A'</title>
   <style>
     :root {
       --google-blue: #1a73e8;
@@ -103,22 +103,25 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.25));
       transition: transform 0.2s ease;
     }
     .brand-section:hover .drive-logo {
-      transform: scale(1.05) rotate(3deg);
+      transform: scale(1.05);
     }
 
     .brand-title {
       font-size: 22px;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--text-primary);
       letter-spacing: -0.3px;
     }
     .brand-title span {
-      color: var(--google-blue);
-      font-weight: 600;
+      background: linear-gradient(135deg, #c9a84c, #f0d080);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
     }
 
     /* Search bar */
@@ -1013,16 +1016,26 @@
   <header class="gdrive-header">
     <div class="brand-section" onclick="navigateTo(null, 'Mon Drive')" title="Retourner à la racine">
       <div class="drive-logo">
-        <svg viewBox="0 0 87.3 78" width="34" height="30">
-          <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-          <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/>
-          <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
-          <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.25z" fill="#00832d"/>
-          <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-          <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+        <!-- A' logo vectoriel -->
+        <svg viewBox="0 0 64 64" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#c9a84c;stop-opacity:1" />
+              <stop offset="60%" style="stop-color:#f0d080;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#b8922a;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <!-- Jambe gauche du A (dorée) -->
+          <polygon points="4,54 16,10 24,10 14,54" fill="url(#goldGrad)"/>
+          <!-- Jambe droite du A (blanche cassée) -->
+          <polygon points="42,54 28,10 36,10 50,54" fill="#e8e0d0"/>
+          <!-- Barre transversale diagonale (blanche cassée) -->
+          <polygon points="18,36 44,28 46,35 20,43" fill="#e8e0d0"/>
+          <!-- Apostrophe dorée -->
+          <polygon points="48,8 52,8 50,18 47,18" fill="url(#goldGrad)"/>
         </svg>
       </div>
-      <span class="brand-title">Mini-<span>Drive</span></span>
+      <span class="brand-title"><span>A prime</span></span>
     </div>
 
     <div class="search-container">
@@ -1033,7 +1046,7 @@
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
         </span>
-        <input type="text" id="search-input" placeholder="Rechercher dans Mini-Drive..." oninput="handleSearch(this.value)">
+        <input type="text" id="search-input" placeholder="Rechercher dans A'..." oninput="handleSearch(this.value)">
         <button class="search-clear" id="search-clear" onclick="clearSearch()" title="Effacer la recherche">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
@@ -1070,7 +1083,16 @@
     <aside class="gdrive-sidebar">
       <div class="new-btn-container">
         <button class="new-btn" onclick="toggleNewMenu(event)" id="btn-new">
-          <svg class="plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <svg class="plus-icon" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="plusGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#c9a84c;stop-opacity:1" />
+                <stop offset="60%" style="stop-color:#f0d080;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#b8922a;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <path fill="url(#plusGold)" d="M16 16v14h4V16h14v-4H20V-2h-4v14H2v4h14z"/>
+          </svg>
           <span>Nouveau</span>
         </button>
 
