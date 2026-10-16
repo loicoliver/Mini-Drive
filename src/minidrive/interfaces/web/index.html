@@ -1,174 +1,2096 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mini-Drive</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
-  header { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-  h1 { font-size: 1.4rem; margin: 0 1rem 0 0; }
-  section { margin-top: 1.5rem; }
-  ul { list-style: none; padding: 0; }
-  li { display: flex; gap: 0.4rem; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid #8884; flex-wrap: wrap; }
-  li .name { font-weight: 600; }
-  li .meta { opacity: 0.65; font-size: 0.85em; }
-  button { cursor: pointer; }
-  #error { color: #c00; min-height: 1.4em; }
-  form { display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap; }
-  input[type=text] { flex: 1; min-width: 8rem; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mini-Drive</title>
+  <style>
+    :root {
+      --google-blue: #1a73e8;
+      --google-blue-hover: #1557b0;
+      --google-blue-surface: #e8f0fe;
+      --google-green: #34a853;
+      --google-yellow: #fbbc04;
+      --google-red: #ea4335;
+      --google-red-hover: #d93025;
+      --google-red-surface: #fce8e6;
+
+      --bg-page: #f8fafd;
+      --bg-surface: #ffffff;
+      --bg-hover: #f1f3f4;
+      --bg-active: #e8f0fe;
+      --border-color: #dadce0;
+      --border-subtle: #e8eaed;
+
+      --text-primary: #202124;
+      --text-secondary: #5f6368;
+      --text-muted: #80868b;
+      --text-on-blue: #ffffff;
+
+      --shadow-sm: 0 1px 2px 0 rgba(60,64,67,0.1), 0 1px 3px 1px rgba(60,64,67,0.06);
+      --shadow-md: 0 1px 3px 0 rgba(60,64,67,0.15), 0 4px 8px 3px rgba(60,64,67,0.08);
+      --shadow-lg: 0 4px 12px 0 rgba(60,64,67,0.2), 0 8px 24px 6px rgba(60,64,67,0.12);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", Helvetica, Arial, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg-page: #131314;
+      --bg-surface: #1e1f20;
+      --bg-hover: #282a2c;
+      --bg-active: #004a77;
+      --border-color: #444746;
+      --border-subtle: #313335;
+
+      --text-primary: #e3e3e3;
+      --text-secondary: #c4c7c5;
+      --text-muted: #8e918f;
+
+      --google-blue-surface: #004a77;
+      --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.5);
+      --shadow-md: 0 2px 6px 2px rgba(0,0,0,0.4);
+      --shadow-lg: 0 6px 18px 4px rgba(0,0,0,0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ========================================================
+       TOP HEADER (Google Drive Style)
+       ======================================================== */
+    header.gdrive-header {
+      height: 64px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--bg-page);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 236px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .drive-logo {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+      transition: transform 0.2s ease;
+    }
+    .brand-section:hover .drive-logo {
+      transform: scale(1.05) rotate(3deg);
+    }
+
+    .brand-title {
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+    .brand-title span {
+      color: var(--google-blue);
+      font-weight: 600;
+    }
+
+    /* Search bar */
+    .search-container {
+      flex: 1;
+      max-width: 720px;
+      position: relative;
+    }
+
+    .search-box {
+      width: 100%;
+      height: 46px;
+      background: var(--bg-surface);
+      border: 1px solid transparent;
+      border-radius: var(--radius-full);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .search-box:focus-within {
+      background: var(--bg-surface);
+      border-color: var(--google-blue);
+      box-shadow: 0 2px 8px rgba(26, 115, 232, 0.2);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 15px;
+      color: var(--text-primary);
+      font-family: inherit;
+    }
+    .search-box input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-icon, .search-clear {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .search-clear {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: none;
+    }
+    .search-clear:hover {
+      background: var(--bg-hover);
+    }
+
+    /* Header Actions */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .icon-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .icon-btn:active {
+      transform: scale(0.95);
+    }
+
+    .rotating {
+      animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* User Profile Badge */
+    .user-profile-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px 4px 6px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    .user-profile-badge:hover {
+      background: var(--bg-hover);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4285F4, #34A853);
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: uppercase;
+    }
+
+    .user-name-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ========================================================
+       MAIN APP LAYOUT (Sidebar + Content)
+       ======================================================== */
+    .app-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    aside.gdrive-sidebar {
+      width: 256px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    /* + Nouveau button (Pill like Google Drive) */
+    .new-btn-container {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .new-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      height: 56px;
+      padding: 0 24px 0 16px;
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid transparent;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .new-btn:hover {
+      box-shadow: 0 2px 6px 0 rgba(60,64,67,0.3), 0 6px 12px 4px rgba(60,64,67,0.2);
+      background: var(--bg-hover);
+    }
+    .new-btn svg.plus-icon {
+      width: 28px;
+      height: 28px;
+    }
+
+    /* Nouveau Dropdown Menu */
+    .dropdown-menu {
+      position: absolute;
+      top: 62px;
+      left: 0;
+      width: 220px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
+      padding: 6px 0;
+      z-index: 100;
+      display: none;
+      animation: fadeInDown 0.15s ease;
+    }
+    .dropdown-menu.active {
+      display: block;
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 10px 18px;
+      background: none;
+      border: none;
+      font-size: 14px;
+      color: var(--text-primary);
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s ease;
+    }
+    .menu-item:hover {
+      background: var(--bg-hover);
+    }
+    .menu-item svg {
+      width: 20px;
+      height: 20px;
+      color: var(--text-secondary);
+    }
+
+    /* Sidebar Navigation Links */
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      height: 40px;
+      padding: 0 16px;
+      border-radius: var(--radius-full);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .nav-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .nav-item.active {
+      background: var(--google-blue-surface);
+      color: var(--google-blue);
+      font-weight: 600;
+    }
+    .nav-item svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Storage Indicator */
+    .storage-card {
+      margin-top: auto;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .storage-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .storage-header svg {
+      width: 18px;
+      height: 18px;
+      color: var(--google-blue);
+    }
+    .storage-bar-bg {
+      height: 5px;
+      background: var(--border-color);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+    .storage-bar-fill {
+      height: 100%;
+      background: var(--google-blue);
+      border-radius: var(--radius-full);
+      transition: width 0.3s ease;
+    }
+    .storage-text {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ========================================================
+       CONTENT AREA (Main Canvas)
+       ======================================================== */
+    main.gdrive-content {
+      flex: 1;
+      background: var(--bg-surface);
+      margin: 0 16px 16px 0;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    /* Toolbar / Breadcrumbs Bar */
+    .content-toolbar {
+      height: 56px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      gap: 16px;
+    }
+
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text-primary);
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+    }
+    .breadcrumbs::-webkit-scrollbar { display: none; }
+
+    .crumb {
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .crumb:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .crumb.current {
+      color: var(--text-primary);
+      font-weight: 600;
+      cursor: default;
+    }
+    .crumb.current:hover {
+      background: transparent;
+    }
+    .crumb-sep {
+      color: var(--text-muted);
+      font-size: 14px;
+      user-select: none;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .view-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .view-toggle-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .view-toggle-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Scrollable File List / Grid Container */
+    .file-canvas {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      position: relative;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+    }
+
+    /* GRID VIEW: Folders */
+    .folders-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .folder-card {
+      height: 48px;
+      padding: 0 14px;
+      background: var(--bg-page);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .folder-card:hover {
+      background: var(--bg-hover);
+      border-color: var(--google-blue);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .folder-icon {
+      width: 24px;
+      height: 24px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    .folder-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-primary);
+    }
+
+    /* GRID VIEW: Files */
+    .files-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .file-card {
+      background: var(--bg-page);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      position: relative;
+    }
+    .file-card:hover {
+      border-color: var(--google-blue);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .file-preview {
+      height: 110px;
+      background: var(--bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    .file-type-icon {
+      width: 48px;
+      height: 48px;
+      transition: transform 0.2s ease;
+    }
+    .file-card:hover .file-type-icon {
+      transform: scale(1.08);
+    }
+
+    .file-details {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .file-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .file-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 3-dots action menu button */
+    .card-menu-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .card-menu-btn:hover {
+      background: var(--border-color);
+      color: var(--text-primary);
+      opacity: 1;
+    }
+
+    /* LIST VIEW */
+    .list-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .list-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    .list-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+    .list-table tr:hover td {
+      background: var(--bg-hover);
+    }
+    .list-row-name {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .list-icon {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    /* Owner pill */
+    .owner-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: var(--bg-hover);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      gap: 16px;
+    }
+    .empty-icon {
+      width: 120px;
+      height: 120px;
+      opacity: 0.6;
+    }
+    .empty-title {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .empty-desc {
+      font-size: 14px;
+      max-width: 340px;
+      line-height: 1.5;
+    }
+
+    /* DRAG & DROP OVERLAY */
+    .drag-overlay {
+      position: absolute;
+      inset: 12px;
+      border: 3px dashed var(--google-blue);
+      border-radius: var(--radius-lg);
+      background: rgba(232, 240, 254, 0.9);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 50;
+      pointer-events: none;
+    }
+    [data-theme="dark"] .drag-overlay {
+      background: rgba(0, 74, 119, 0.9);
+    }
+    .drag-overlay.active {
+      display: flex;
+    }
+    .drag-overlay svg {
+      width: 64px;
+      height: 64px;
+      color: var(--google-blue);
+      animation: bounce 1s infinite alternate;
+    }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-8px); }
+    }
+    .drag-overlay-text {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--google-blue);
+    }
+
+    /* ========================================================
+       MODALS & DIALOGS (Google Material Style)
+       ======================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 24px;
+      transform: scale(0.92);
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .modal-backdrop.active .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .form-input, .form-select {
+      height: 44px;
+      padding: 0 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border 0.15s ease, box-shadow 0.15s ease;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--google-blue);
+      box-shadow: 0 0 0 2px var(--google-blue-surface);
+    }
+
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .btn-secondary {
+      height: 38px;
+      padding: 0 16px;
+      border-radius: var(--radius-full);
+      border: none;
+      background: transparent;
+      color: var(--google-blue);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .btn-secondary:hover {
+      background: var(--google-blue-surface);
+    }
+
+    .btn-primary {
+      height: 38px;
+      padding: 0 20px;
+      border-radius: var(--radius-full);
+      border: none;
+      background: var(--google-blue);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-primary:hover {
+      background: var(--google-blue-hover);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-danger {
+      background: var(--google-red);
+    }
+    .btn-danger:hover {
+      background: var(--google-red-hover);
+    }
+
+    /* Context Menu / Popup Menu */
+    .context-menu {
+      position: fixed;
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
+      padding: 6px 0;
+      z-index: 300;
+      display: none;
+      min-width: 190px;
+    }
+    .context-menu.active {
+      display: block;
+    }
+
+    /* User Switcher Modal/Menu */
+    .user-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .user-chip {
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-color);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .user-chip:hover {
+      border-color: var(--google-blue);
+      background: var(--google-blue-surface);
+      color: var(--google-blue);
+    }
+
+    /* TOAST NOTIFICATION */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 500;
+      pointer-events: none;
+    }
+
+    .toast {
+      min-width: 280px;
+      max-width: 420px;
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      background: #323232;
+      color: #ffffff;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-lg);
+      pointer-events: auto;
+      animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .toast.error {
+      background: #b00020;
+    }
+    .toast.success {
+      background: #1e4620;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
 </head>
 <body>
-<header>
-  <h1>Mini-Drive</h1>
-  <label>Utilisateur : <input type="text" id="user" value="local" size="10"></label>
-  <button onclick="refresh()">Actualiser</button>
-</header>
-<p id="error" role="alert"></p>
 
-<section>
-  <h2>Dossiers</h2>
-  <ul id="folders"></ul>
-  <form onsubmit="return mkdir(event)">
-    <input type="text" id="new-folder" placeholder="Nouveau dossier" required>
-    <button>Créer</button>
-  </form>
-</section>
+  <!-- ========================================================
+       TOP HEADER
+       ======================================================== -->
+  <header class="gdrive-header">
+    <div class="brand-section" onclick="navigateTo(null, 'Mon Drive')" title="Retourner à la racine">
+      <div class="drive-logo">
+        <svg viewBox="0 0 87.3 78" width="34" height="30">
+          <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+          <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/>
+          <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+          <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.25z" fill="#00832d"/>
+          <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+          <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+        </svg>
+      </div>
+      <span class="brand-title">Mini-<span>Drive</span></span>
+    </div>
 
-<section>
-  <h2>Fichiers</h2>
-  <ul id="files"></ul>
-  <form onsubmit="return upload(event)">
-    <input type="file" id="new-file" required>
-    <button>Uploader</button>
-  </form>
-</section>
+    <div class="search-container">
+      <div class="search-box">
+        <span class="search-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </span>
+        <input type="text" id="search-input" placeholder="Rechercher dans Mini-Drive..." oninput="handleSearch(this.value)">
+        <button class="search-clear" id="search-clear" onclick="clearSearch()" title="Effacer la recherche">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
 
-<script>
-const user = () => encodeURIComponent(document.getElementById('user').value || 'local');
-const err = (m) => { document.getElementById('error').textContent = m || ''; };
+    <div class="header-actions">
+      <button class="icon-btn" id="btn-refresh" onclick="triggerRefresh()" title="Actualiser (Ctrl+R)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
 
-async function api(method, path, body) {
-  err('');
-  const res = await fetch(path + '?user=' + user(), {
-    method,
-    headers: body !== undefined ? {'Content-Type': 'application/json'} : {},
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  const ctype = res.headers.get('content-type') || '';
-  const payload = ctype.includes('json') ? await res.json() : await res.blob();
-  if (!res.ok) throw new Error((payload && payload.error) || res.statusText);
-  return payload;
-}
+      <button class="icon-btn" id="btn-theme" onclick="toggleTheme()" title="Basculer le thème">
+        <svg id="theme-icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      </button>
 
-function btn(label, fn) {
-  const b = document.createElement('button');
-  b.textContent = label;
-  b.onclick = fn;
-  return b;
-}
+      <!-- User Profile Badge -->
+      <div class="user-profile-badge" onclick="openUserModal()" title="Changer d'utilisateur">
+        <div class="user-avatar" id="header-user-avatar">L</div>
+        <span class="user-name-label" id="header-user-name">local</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+    </div>
+  </header>
 
-async function refresh() {
-  try {
-    const [folders, files] = await Promise.all([
-      api('GET', '/api/folders'), api('GET', '/api/files'),
-    ]);
-    const uf = document.getElementById('folders');
-    uf.innerHTML = '';
-    folders.forEach((f) => uf.appendChild(row(
-      `${f.name}`, `ID ${f.id.slice(0, 8)} · ${f.owner_id}`,
-      [['Renommer', () => renameNode('folders', f)], ['Corbeille', () => trash('folders', f.id)],
-       ['Suppr.', () => rm('folders', f.id)], ['Partager', () => share('folders', f.id)]],
-    )));
-    const uf2 = document.getElementById('files');
-    uf2.innerHTML = '';
-    files.forEach((f) => uf2.appendChild(row(
-      `${f.name}`, `${f.size_bytes} octets · ${f.owner_id}`,
-      [['Télécharger', () => download(f)], ['Renommer', () => renameNode('files', f)],
-       ['Corbeille', () => trash('files', f.id)], ['Suppr.', () => rm('files', f.id)],
-       ['Partager', () => share('files', f.id)]],
-    )));
-  } catch (e) { err(e.message); }
-}
+  <!-- ========================================================
+       MAIN APPLICATION LAYOUT
+       ======================================================== -->
+  <div class="app-body">
+    <!-- Sidebar -->
+    <aside class="gdrive-sidebar">
+      <div class="new-btn-container">
+        <button class="new-btn" onclick="toggleNewMenu(event)" id="btn-new">
+          <svg class="plus-icon" viewBox="0 0 36 36">
+            <path fill="#4285F4" d="M16 16v14h4V16h14v-4H20V-2h-4v14H2v4h14z"/>
+            <path fill="#FBBC05" d="M30 16H20l-4-4h14z"/>
+            <path fill="#EA4335" d="M6 16h14V2H6z"/>
+            <path fill="#34A853" d="M20 30h-4V16h4z"/>
+          </svg>
+          <span>Nouveau</span>
+        </button>
 
-function row(name, meta, actions) {
-  const li = document.createElement('li');
-  const n = document.createElement('span');
-  n.className = 'name';
-  n.textContent = name;
-  const m = document.createElement('span');
-  m.className = 'meta';
-  m.textContent = meta;
-  li.append(n, m);
-  actions.forEach(([label, fn]) => li.appendChild(btn(label, async () => {
-    try { await fn(); await refresh(); } catch (e) { err(e.message); }
-  })));
-  return li;
-}
+        <div class="dropdown-menu" id="new-dropdown">
+          <button class="menu-item" onclick="openNewFolderModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+            Nouveau dossier
+          </button>
+          <button class="menu-item" onclick="triggerFileUpload()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Importer un fichier
+          </button>
+        </div>
+      </div>
 
-async function mkdir(e) {
-  e.preventDefault();
-  const input = document.getElementById('new-folder');
-  await api('POST', '/api/folders', {name: input.value});
-  input.value = '';
-  await refresh();
-  return false;
-}
+      <ul class="nav-list">
+        <li class="nav-item active" id="nav-my-drive" onclick="switchNavTab('my-drive')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          Mon Drive
+        </li>
+        <li class="nav-item" id="nav-shared" onclick="switchNavTab('shared')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          Partagés avec moi
+        </li>
+        <li class="nav-item" id="nav-recent" onclick="switchNavTab('recent')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Récents
+        </li>
+      </ul>
 
-async function upload(e) {
-  e.preventDefault();
-  const input = document.getElementById('new-file');
-  const file = input.files[0];
-  if (!file) return false;
-  const buf = await file.arrayBuffer();
-  let bin = '';
-  new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); });
-  await api('POST', '/api/files', {name: file.name, content_base64: btoa(bin)});
-  input.value = '';
-  await refresh();
-  return false;
-}
+      <div class="storage-card">
+        <div class="storage-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+          <span>Espace de stockage</span>
+        </div>
+        <div class="storage-bar-bg">
+          <div class="storage-bar-fill" id="storage-fill" style="width: 15%;"></div>
+        </div>
+        <div class="storage-text" id="storage-text">Calcul du stockage...</div>
+      </div>
+    </aside>
 
-async function download(f) {
-  const res = await fetch(`/api/files/${f.id}/content?user=` + user());
-  if (!res.ok) throw new Error((await res.json()).error);
-  const blob = await res.blob();
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = f.name;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
+    <!-- Main Canvas -->
+    <main class="gdrive-content" id="drop-zone">
+      <!-- Drag & Drop overlay -->
+      <div class="drag-overlay" id="drag-overlay">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <div class="drag-overlay-text">Déposez vos fichiers pour les importer dans Mini-Drive</div>
+      </div>
 
-async function renameNode(kind, node) {
-  const name = prompt('Nouveau nom :', node.name);
-  if (!name || name === node.name) return;
-  await api('PATCH', `/api/${kind}/${node.id}`, {name});
-}
+      <!-- Toolbar -->
+      <div class="content-toolbar">
+        <div class="breadcrumbs" id="breadcrumbs">
+          <span class="crumb current">Mon Drive</span>
+        </div>
 
-async function trash(kind, id) {
-  if (!confirm('Mettre à la corbeille ?')) return;
-  await api('POST', `/api/${kind}/${id}/trash`, {});
-}
+        <div class="toolbar-actions">
+          <button class="view-toggle-btn" onclick="toggleViewMode()" id="view-toggle-btn" title="Basculer entre grille et liste">
+            <svg id="view-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span id="view-text">Vue grille</span>
+          </button>
+        </div>
+      </div>
 
-async function rm(kind, id) {
-  if (!confirm('Supprimer DÉFINITIVEMENT ?')) return;
-  await fetch(`/api/${kind}/${id}?user=` + user(), {method: 'DELETE'});
-  await refresh();
-}
+      <!-- File Canvas Content -->
+      <div class="file-canvas" id="canvas-content">
+        <!-- Folders Section -->
+        <div id="folders-container">
+          <div class="section-title">
+            <span>Dossiers</span>
+            <span class="section-badge" id="folders-count">0</span>
+          </div>
+          <div class="folders-grid" id="folders-list"></div>
+        </div>
 
-async function share(kind, id) {
-  const target = prompt('Partager avec (utilisateur) :');
-  if (!target) return;
-  const role = prompt('Rôle (reader/editor) :', 'reader');
-  if (!role) return;
-  await api('POST', `/api/${kind}/${id}/share`, {user: target, role});
-}
+        <!-- Files Section -->
+        <div id="files-container">
+          <div class="section-title">
+            <span>Fichiers</span>
+            <span class="section-badge" id="files-count">0</span>
+          </div>
+          <div class="files-grid" id="files-list"></div>
+        </div>
 
-document.getElementById('user').addEventListener('change', refresh);
-refresh();
-</script>
+        <!-- Empty State Container -->
+        <div class="empty-state" id="empty-state" style="display: none;">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <div class="empty-title">Cet endroit est vide</div>
+          <div class="empty-desc">Glissez-déposez des fichiers ici ou utilisez le bouton <strong>+ Nouveau</strong> pour commencer.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Hidden native file input for upload -->
+  <input type="file" id="file-uploader" style="display: none;" onchange="handleFileUpload(event)">
+
+  <!-- ========================================================
+       MODALS & DIALOGS
+       ======================================================== -->
+
+  <!-- Modal: Nouveau Dossier -->
+  <div class="modal-backdrop" id="modal-new-folder">
+    <div class="modal-card">
+      <div class="modal-title">Nouveau dossier</div>
+      <div class="form-group">
+        <label for="new-folder-input">Nom du dossier</label>
+        <input type="text" id="new-folder-input" class="form-input" placeholder="Sans titre" autofocus>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-new-folder')">Annuler</button>
+        <button class="btn-primary" onclick="submitNewFolder()">Créer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Renommer -->
+  <div class="modal-backdrop" id="modal-rename">
+    <div class="modal-card">
+      <div class="modal-title">Renommer</div>
+      <div class="form-group">
+        <label for="rename-input">Nouveau nom</label>
+        <input type="text" id="rename-input" class="form-input">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-rename')">Annuler</button>
+        <button class="btn-primary" onclick="submitRename()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Déplacer -->
+  <div class="modal-backdrop" id="modal-move">
+    <div class="modal-card">
+      <div class="modal-title">Déplacer vers...</div>
+      <div class="form-group">
+        <label for="move-folder-select">Sélectionnez le dossier de destination</label>
+        <select id="move-folder-select" class="form-select">
+          <option value="">(Mon Drive - Racine)</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-move')">Annuler</button>
+        <button class="btn-primary" onclick="submitMove()">Déplacer ici</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Partager -->
+  <div class="modal-backdrop" id="modal-share">
+    <div class="modal-card">
+      <div class="modal-title">Partager l'élément</div>
+      <div class="form-group">
+        <label for="share-user-input">Utilisateur bénéficiaire</label>
+        <input type="text" id="share-user-input" class="form-input" placeholder="Ex: alice, bob...">
+        <div class="user-chip-list">
+          <span class="user-chip" onclick="document.getElementById('share-user-input').value='alice'">alice</span>
+          <span class="user-chip" onclick="document.getElementById('share-user-input').value='bob'">bob</span>
+          <span class="user-chip" onclick="document.getElementById('share-user-input').value='charlie'">charlie</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="share-role-select">Rôle accordé</label>
+        <select id="share-role-select" class="form-select">
+          <option value="reader">Lecteur (lecture et téléchargement)</option>
+          <option value="editor">Éditeur (modification et renommage)</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-share')">Annuler</button>
+        <button class="btn-primary" onclick="submitShare()">Partager</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Changer d'utilisateur -->
+  <div class="modal-backdrop" id="modal-user">
+    <div class="modal-card">
+      <div class="modal-title">Changer d'utilisateur</div>
+      <div class="form-group">
+        <label for="user-input-dialog">Identifiant utilisateur</label>
+        <input type="text" id="user-input-dialog" class="form-input" placeholder="local">
+        <div class="user-chip-list">
+          <span class="user-chip" onclick="selectUser('local')">local</span>
+          <span class="user-chip" onclick="selectUser('alice')">alice</span>
+          <span class="user-chip" onclick="selectUser('bob')">bob</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-user')">Fermer</button>
+        <button class="btn-primary" onclick="submitUserChange()">Changer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmation (Corbeille / Purge) -->
+  <div class="modal-backdrop" id="modal-confirm">
+    <div class="modal-card">
+      <div class="modal-title" id="confirm-title">Confirmer l'action</div>
+      <p id="confirm-message" style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;"></p>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-confirm')">Annuler</button>
+        <button class="btn-primary btn-danger" id="confirm-ok-btn">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu (Kebab) -->
+  <div class="context-menu" id="context-menu">
+    <button class="menu-item" id="menu-download" onclick="triggerMenuAction('download')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      Télécharger
+    </button>
+    <button class="menu-item" id="menu-rename" onclick="triggerMenuAction('rename')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+      Renommer
+    </button>
+    <button class="menu-item" id="menu-move" onclick="triggerMenuAction('move')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      Déplacer vers...
+    </button>
+    <button class="menu-item" id="menu-share" onclick="triggerMenuAction('share')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+      Partager
+    </button>
+    <div style="height: 1px; background: var(--border-subtle); margin: 4px 0;"></div>
+    <button class="menu-item" id="menu-trash" onclick="triggerMenuAction('trash')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      Mettre à la corbeille
+    </button>
+    <button class="menu-item" id="menu-rm" style="color: var(--google-red);" onclick="triggerMenuAction('rm')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      Supprimer définitivement
+    </button>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ========================================================
+       JAVASCRIPT LOGIC
+       ======================================================== -->
+  <script>
+    // --- Application State ---
+    let currentUser = localStorage.getItem('minidrive_user') || 'local';
+    let currentFolderId = null; // null = Root / Mon Drive
+    let breadcrumbStack = [{ id: null, name: 'Mon Drive' }];
+    let currentNavTab = 'my-drive'; // 'my-drive' | 'shared' | 'recent'
+    let viewMode = localStorage.getItem('minidrive_view') || 'grid'; // 'grid' | 'list'
+    let searchQuery = '';
+
+    let allFolders = [];
+    let allFiles = [];
+
+    let activeMenuNode = null; // { kind: 'folders'|'files', item: object }
+    let activeModalTarget = null;
+
+    // --- Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+      initUser();
+      initTheme();
+      initViewMode();
+      initDragAndDrop();
+      refresh();
+    });
+
+    // --- User Management ---
+    function initUser() {
+      document.getElementById('header-user-name').textContent = currentUser;
+      document.getElementById('header-user-avatar').textContent = currentUser.charAt(0).toUpperCase();
+      document.getElementById('user-input-dialog').value = currentUser;
+    }
+
+    function openUserModal() {
+      document.getElementById('user-input-dialog').value = currentUser;
+      openModal('modal-user');
+    }
+
+    function selectUser(user) {
+      document.getElementById('user-input-dialog').value = user;
+      submitUserChange();
+    }
+
+    function submitUserChange() {
+      const val = document.getElementById('user-input-dialog').value.trim() || 'local';
+      currentUser = val;
+      localStorage.setItem('minidrive_user', currentUser);
+      initUser();
+      closeModal('modal-user');
+      showToast(`Connecté en tant que "${currentUser}"`, 'info');
+      refresh();
+    }
+
+    // --- Theme Management ---
+    function initTheme() {
+      const theme = localStorage.getItem('minidrive_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+      updateThemeIcon(theme);
+    }
+
+    function toggleTheme() {
+      const cur = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('minidrive_theme', next);
+      updateThemeIcon(next);
+    }
+
+    function updateThemeIcon(theme) {
+      const sun = document.getElementById('theme-icon-sun');
+      if (theme === 'dark') {
+        sun.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+      } else {
+        sun.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+      }
+    }
+
+    // --- View Mode (Grid vs List) ---
+    function initViewMode() {
+      applyViewMode();
+    }
+
+    function toggleViewMode() {
+      viewMode = viewMode === 'grid' ? 'list' : 'grid';
+      localStorage.setItem('minidrive_view', viewMode);
+      applyViewMode();
+      renderCanvas();
+    }
+
+    function applyViewMode() {
+      const btn = document.getElementById('view-text');
+      const icon = document.getElementById('view-icon');
+      if (viewMode === 'grid') {
+        btn.textContent = 'Vue grille';
+        icon.innerHTML = '<rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>';
+      } else {
+        btn.textContent = 'Vue liste';
+        icon.innerHTML = '<line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>';
+      }
+    }
+
+    // --- Navigation Tabs ---
+    function switchNavTab(tab) {
+      currentNavTab = tab;
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      if (tab === 'my-drive') {
+        document.getElementById('nav-my-drive').classList.add('active');
+        navigateTo(null, 'Mon Drive');
+      } else if (tab === 'shared') {
+        document.getElementById('nav-shared').classList.add('active');
+        breadcrumbStack = [{ id: 'shared', name: 'Partagés avec moi' }];
+        renderBreadcrumbs();
+        renderCanvas();
+      } else if (tab === 'recent') {
+        document.getElementById('nav-recent').classList.add('active');
+        breadcrumbStack = [{ id: 'recent', name: 'Récents' }];
+        renderBreadcrumbs();
+        renderCanvas();
+      }
+    }
+
+    function navigateTo(folderId, folderName) {
+      currentNavTab = 'my-drive';
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.getElementById('nav-my-drive').classList.add('active');
+
+      if (folderId === null) {
+        currentFolderId = null;
+        breadcrumbStack = [{ id: null, name: 'Mon Drive' }];
+      } else {
+        currentFolderId = folderId;
+        const existingIdx = breadcrumbStack.findIndex(b => b.id === folderId);
+        if (existingIdx >= 0) {
+          breadcrumbStack = breadcrumbStack.slice(0, existingIdx + 1);
+        } else {
+          breadcrumbStack.push({ id: folderId, name: folderName });
+        }
+      }
+      renderBreadcrumbs();
+      renderCanvas();
+    }
+
+    function renderBreadcrumbs() {
+      const container = document.getElementById('breadcrumbs');
+      container.innerHTML = '';
+      breadcrumbStack.forEach((b, idx) => {
+        const isLast = idx === breadcrumbStack.length - 1;
+        const span = document.createElement('span');
+        span.className = `crumb ${isLast ? 'current' : ''}`;
+        span.textContent = b.name;
+        if (!isLast) {
+          span.onclick = () => {
+            if (b.id === 'shared' || b.id === 'recent') {
+              switchNavTab(b.id);
+            } else {
+              navigateTo(b.id, b.name);
+            }
+          };
+        }
+        container.appendChild(span);
+        if (!isLast) {
+          const sep = document.createElement('span');
+          sep.className = 'crumb-sep';
+          sep.textContent = '>';
+          container.appendChild(sep);
+        }
+      });
+    }
+
+    // --- Search ---
+    function handleSearch(val) {
+      searchQuery = val.trim().toLowerCase();
+      document.getElementById('search-clear').style.display = searchQuery ? 'flex' : 'none';
+      renderCanvas();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      handleSearch('');
+    }
+
+    // --- API Fetch Wrapper ---
+    async function api(method, path, body) {
+      const sep = path.includes('?') ? '&' : '?';
+      const url = `${path}${sep}user=${encodeURIComponent(currentUser)}`;
+      const opts = {
+        method,
+        headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      };
+
+      const res = await fetch(url, opts);
+      const ctype = res.headers.get('content-type') || '';
+      const payload = ctype.includes('json') ? await res.json() : await res.blob();
+      if (!res.ok) {
+        throw new Error((payload && payload.error) || res.statusText || 'Erreur requête');
+      }
+      return payload;
+    }
+
+    // --- Refresh Data ---
+    async function triggerRefresh() {
+      const btn = document.getElementById('btn-refresh');
+      btn.classList.add('rotating');
+      await refresh();
+      setTimeout(() => btn.classList.remove('rotating'), 600);
+    }
+
+    async function refresh() {
+      try {
+        const [folders, files] = await Promise.all([
+          api('GET', '/api/folders'),
+          api('GET', '/api/files'),
+        ]);
+        allFolders = folders;
+        allFiles = files;
+        updateStorage();
+        renderCanvas();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function updateStorage() {
+      const totalBytes = allFiles.reduce((acc, f) => acc + (f.size_bytes || 0), 0);
+      const text = document.getElementById('storage-text');
+      const fill = document.getElementById('storage-fill');
+      text.textContent = `${formatSize(totalBytes)} utilisés (${allFiles.length} fichier${allFiles.length > 1 ? 's' : ''})`;
+      // Assume a 100MB soft ceiling for visualization
+      const pct = Math.min(100, Math.max(3, (totalBytes / (100 * 1024 * 1024)) * 100));
+      fill.style.width = `${pct}%`;
+    }
+
+    // --- Render Canvas (Folders & Files) ---
+    function renderCanvas() {
+      let filteredFolders = [];
+      let filteredFiles = [];
+
+      if (searchQuery) {
+        // Search across everything
+        filteredFolders = allFolders.filter(f => f.name.toLowerCase().includes(searchQuery));
+        filteredFiles = allFiles.filter(f => f.name.toLowerCase().includes(searchQuery));
+      } else if (currentNavTab === 'shared') {
+        filteredFolders = allFolders.filter(f => f.owner_id !== currentUser);
+        filteredFiles = allFiles.filter(f => f.owner_id !== currentUser);
+      } else if (currentNavTab === 'recent') {
+        filteredFolders = [...allFolders];
+        filteredFiles = [...allFiles];
+      } else {
+        // Mon Drive navigation based on parent_id
+        filteredFolders = allFolders.filter(f => (f.parent_id || null) === (currentFolderId || null));
+        filteredFiles = allFiles.filter(f => (f.parent_id || null) === (currentFolderId || null));
+      }
+
+      const foldersContainer = document.getElementById('folders-container');
+      const filesContainer = document.getElementById('files-container');
+      const emptyState = document.getElementById('empty-state');
+
+      document.getElementById('folders-count').textContent = filteredFolders.length;
+      document.getElementById('files-count').textContent = filteredFiles.length;
+
+      if (filteredFolders.length === 0 && filteredFiles.length === 0) {
+        foldersContainer.style.display = 'none';
+        filesContainer.style.display = 'none';
+        emptyState.style.display = 'flex';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      foldersContainer.style.display = filteredFolders.length > 0 ? 'block' : 'none';
+      filesContainer.style.display = filteredFiles.length > 0 ? 'block' : 'none';
+
+      const uf = document.getElementById('folders-list');
+      const ufiles = document.getElementById('files-list');
+
+      if (viewMode === 'grid') {
+        uf.className = 'folders-grid';
+        ufiles.className = 'files-grid';
+        renderFoldersGrid(uf, filteredFolders);
+        renderFilesGrid(ufiles, filteredFiles);
+      } else {
+        uf.className = '';
+        ufiles.className = '';
+        renderListView(uf, ufiles, filteredFolders, filteredFiles);
+      }
+    }
+
+    // --- Folder Grid Render ---
+    function renderFoldersGrid(container, folders) {
+      container.innerHTML = '';
+      folders.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'folder-card';
+        card.innerHTML = `
+          <svg class="folder-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+          </svg>
+          <span class="folder-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+          <button class="card-menu-btn" title="Options">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle>
+            </svg>
+          </button>
+        `;
+        card.onclick = (e) => {
+          if (e.target.closest('.card-menu-btn')) return;
+          navigateTo(f.id, f.name);
+        };
+        const menuBtn = card.querySelector('.card-menu-btn');
+        menuBtn.onclick = (e) => {
+          e.stopPropagation();
+          openContextMenu(e, 'folders', f);
+        };
+        container.appendChild(card);
+      });
+    }
+
+    // --- Files Grid Render ---
+    function renderFilesGrid(container, files) {
+      container.innerHTML = '';
+      files.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'file-card';
+        const typeInfo = getFileTypeInfo(f.name);
+        card.innerHTML = `
+          <div class="file-preview">
+            <svg class="file-type-icon" viewBox="0 0 24 24" fill="${typeInfo.color}">
+              ${typeInfo.path}
+            </svg>
+          </div>
+          <div class="file-details">
+            <span class="file-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+            <div class="file-meta">
+              <span>${formatSize(f.size_bytes)}</span>
+              <span class="owner-pill">${escapeHtml(f.owner_id)}</span>
+            </div>
+          </div>
+          <button class="card-menu-btn" style="position: absolute; top: 8px; right: 8px;" title="Options">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle>
+            </svg>
+          </button>
+        `;
+        card.ondblclick = () => downloadFile(f);
+        const menuBtn = card.querySelector('.card-menu-btn');
+        menuBtn.onclick = (e) => {
+          e.stopPropagation();
+          openContextMenu(e, 'files', f);
+        };
+        container.appendChild(card);
+      });
+    }
+
+    // --- List View Render ---
+    function renderListView(fContainer, filesContainer, folders, files) {
+      if (folders.length > 0) {
+        fContainer.innerHTML = `
+          <table class="list-table">
+            <thead><tr><th>Nom</th><th>Propriétaire</th><th>Taille</th><th style="text-align: right;">Action</th></tr></thead>
+            <tbody>
+              ${folders.map(f => `
+                <tr onclick="navigateTo('${f.id}', '${escapeHtml(f.name)}')">
+                  <td>
+                    <div class="list-row-name">
+                      <svg class="list-icon" viewBox="0 0 24 24" fill="#5f6368"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                      <span>${escapeHtml(f.name)}</span>
+                    </div>
+                  </td>
+                  <td><span class="owner-pill">${escapeHtml(f.owner_id)}</span></td>
+                  <td>—</td>
+                  <td style="text-align: right;">
+                    <button class="card-menu-btn" data-folder-id="${f.id}" style="display: inline-flex;" title="Options">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg>
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        fContainer.querySelectorAll('.card-menu-btn').forEach(btn => {
+          const fid = btn.getAttribute('data-folder-id');
+          const f = folders.find(x => x.id === fid);
+          btn.onclick = (e) => { e.stopPropagation(); openContextMenu(e, 'folders', f); };
+        });
+      }
+
+      if (files.length > 0) {
+        filesContainer.innerHTML = `
+          <table class="list-table">
+            <thead><tr><th>Nom</th><th>Propriétaire</th><th>Taille</th><th style="text-align: right;">Action</th></tr></thead>
+            <tbody>
+              ${files.map(f => {
+                const info = getFileTypeInfo(f.name);
+                return `
+                  <tr ondblclick="downloadFileById('${f.id}')">
+                    <td>
+                      <div class="list-row-name">
+                        <svg class="list-icon" viewBox="0 0 24 24" fill="${info.color}">${info.path}</svg>
+                        <span>${escapeHtml(f.name)}</span>
+                      </div>
+                    </td>
+                    <td><span class="owner-pill">${escapeHtml(f.owner_id)}</span></td>
+                    <td>${formatSize(f.size_bytes)}</td>
+                    <td style="text-align: right;">
+                      <button class="card-menu-btn" data-file-id="${f.id}" style="display: inline-flex;" title="Options">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg>
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+        filesContainer.querySelectorAll('.card-menu-btn').forEach(btn => {
+          const fid = btn.getAttribute('data-file-id');
+          const f = files.find(x => x.id === fid);
+          btn.onclick = (e) => { e.stopPropagation(); openContextMenu(e, 'files', f); };
+        });
+      }
+    }
+
+    // --- Helper: File Type Icons & Colors ---
+    function getFileTypeInfo(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp'].includes(ext)) {
+        return { color: '#ea4335', path: '<path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>' };
+      }
+      if (['pdf'].includes(ext)) {
+        return { color: '#db4437', path: '<path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zm4.5 2h1v-3h-1v3z"/>' };
+      }
+      if (['py', 'js', 'html', 'css', 'json', 'ts', 'c', 'cpp', 'sh', 'sql', 'toml', 'yaml', 'md'].includes(ext)) {
+        return { color: '#0f9d58', path: '<path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>' };
+      }
+      if (['zip', 'tar', 'gz', 'rar', '7z'].includes(ext)) {
+        return { color: '#f4b400', path: '<path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10h-4v-2h4v2zm0-4h-4v-2h4v2zm0-4h-4V6h4v2z"/>' };
+      }
+      if (['mp3', 'wav', 'ogg', 'mp4', 'mov', 'avi', 'mkv'].includes(ext)) {
+        return { color: '#ab47bc', path: '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>' };
+      }
+      return { color: '#4285f4', path: '<path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>' };
+    }
+
+    // --- Format File Size ---
+    function formatSize(bytes) {
+      if (bytes === undefined || bytes === null || isNaN(bytes)) return '0 octet';
+      if (bytes === 0) return '0 octet';
+      const k = 1024;
+      const sizes = ['octets', 'Ko', 'Mo', 'Go'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(i > 0 ? 1 : 0)) + ' ' + sizes[i];
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+
+    // --- Context Menu Management ---
+    function openContextMenu(e, kind, item) {
+      activeMenuNode = { kind, item };
+      const menu = document.getElementById('context-menu');
+
+      // Adjust download availability
+      document.getElementById('menu-download').style.display = kind === 'files' ? 'flex' : 'none';
+
+      menu.classList.add('active');
+      const rect = menu.getBoundingClientRect();
+      let x = e.clientX;
+      let y = e.clientY;
+
+      if (x + 200 > window.innerWidth) x = window.innerWidth - 210;
+      if (y + 240 > window.innerHeight) y = window.innerHeight - 250;
+
+      menu.style.left = `${x}px`;
+      menu.style.top = `${y}px`;
+    }
+
+    function closeContextMenu() {
+      document.getElementById('context-menu').classList.remove('active');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#context-menu') && !e.target.closest('.card-menu-btn')) {
+        closeContextMenu();
+      }
+      if (!e.target.closest('#new-dropdown') && !e.target.closest('#btn-new')) {
+        document.getElementById('new-dropdown').classList.remove('active');
+      }
+    });
+
+    // --- Context Menu Actions ---
+    function triggerMenuAction(action) {
+      if (!activeMenuNode) return;
+      const { kind, item } = activeMenuNode;
+      closeContextMenu();
+
+      if (action === 'download' && kind === 'files') {
+        downloadFile(item);
+      } else if (action === 'rename') {
+        activeModalTarget = { kind, item };
+        document.getElementById('rename-input').value = item.name;
+        openModal('modal-rename');
+      } else if (action === 'move') {
+        activeModalTarget = { kind, item };
+        populateMoveSelect(item.id);
+        openModal('modal-move');
+      } else if (action === 'share') {
+        activeModalTarget = { kind, item };
+        document.getElementById('share-user-input').value = '';
+        openModal('modal-share');
+      } else if (action === 'trash') {
+        openConfirmModal(
+          'Mettre à la corbeille ?',
+          `Voulez-vous déplacer "${escapeHtml(item.name)}" vers la corbeille ?`,
+          async () => {
+            await api('POST', `/api/${kind}/${item.id}/trash`, {});
+            showToast(`"${item.name}" déplacé dans la corbeille`, 'success');
+            await refresh();
+          }
+        );
+      } else if (action === 'rm') {
+        openConfirmModal(
+          'Supprimer DÉFINITIVEMENT ?',
+          `Cette action supprimera définitivement "${escapeHtml(item.name)}" et est irréversible.`,
+          async () => {
+            await fetch(`/api/${kind}/${item.id}?user=${encodeURIComponent(currentUser)}`, { method: 'DELETE' });
+            showToast(`"${item.name}" supprimé définitivement`, 'success');
+            await refresh();
+          }
+        );
+      }
+    }
+
+    // --- Modals Management ---
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+      const input = document.getElementById(id).querySelector('input');
+      if (input) setTimeout(() => { input.focus(); input.select?.(); }, 100);
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function openConfirmModal(title, message, onOk) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      const okBtn = document.getElementById('confirm-ok-btn');
+      okBtn.onclick = async () => {
+        closeModal('modal-confirm');
+        try {
+          await onOk();
+        } catch (e) {
+          showToast(e.message, 'error');
+        }
+      };
+      openModal('modal-confirm');
+    }
+
+    // --- Modal Submissions ---
+    async function submitNewFolder() {
+      const name = document.getElementById('new-folder-input').value.trim();
+      if (!name) return;
+      try {
+        await api('POST', '/api/folders', { name, parent_id: currentFolderId });
+        closeModal('modal-new-folder');
+        showToast(`Dossier "${name}" créé`, 'success');
+        await refresh();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function submitRename() {
+      if (!activeModalTarget) return;
+      const { kind, item } = activeModalTarget;
+      const newName = document.getElementById('rename-input').value.trim();
+      if (!newName || newName === item.name) {
+        closeModal('modal-rename');
+        return;
+      }
+      try {
+        await api('PATCH', `/api/${kind}/${item.id}`, { name: newName });
+        closeModal('modal-rename');
+        showToast(`Renommé en "${newName}"`, 'success');
+        await refresh();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function populateMoveSelect(excludeId) {
+      const select = document.getElementById('move-folder-select');
+      select.innerHTML = '<option value="">(Mon Drive - Racine)</option>';
+      allFolders
+        .filter(f => f.id !== excludeId)
+        .forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f.id;
+          opt.textContent = `📁 ${f.name}`;
+          select.appendChild(opt);
+        });
+    }
+
+    async function submitMove() {
+      if (!activeModalTarget) return;
+      const { kind, item } = activeModalTarget;
+      const parent_id = document.getElementById('move-folder-select').value || null;
+      try {
+        await api('POST', `/api/${kind}/${item.id}/move`, { parent_id });
+        closeModal('modal-move');
+        showToast(`"${item.name}" déplacé`, 'success');
+        await refresh();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function submitShare() {
+      if (!activeModalTarget) return;
+      const { kind, item } = activeModalTarget;
+      const user = document.getElementById('share-user-input').value.trim();
+      const role = document.getElementById('share-role-select').value;
+      if (!user) return;
+      try {
+        await api('POST', `/api/${kind}/${item.id}/share`, { user, role });
+        closeModal('modal-share');
+        showToast(`Partagé avec "${user}" (${role})`, 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // --- Upload & Download ---
+    function toggleNewMenu(e) {
+      e.stopPropagation();
+      document.getElementById('new-dropdown').classList.toggle('active');
+    }
+
+    function openNewFolderModal() {
+      document.getElementById('new-dropdown').classList.remove('active');
+      document.getElementById('new-folder-input').value = '';
+      openModal('modal-new-folder');
+    }
+
+    function triggerFileUpload() {
+      document.getElementById('new-dropdown').classList.remove('active');
+      document.getElementById('file-uploader').click();
+    }
+
+    async function handleFileUpload(e) {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      for (const file of files) {
+        await uploadSingleFile(file);
+      }
+      e.target.value = '';
+      await refresh();
+    }
+
+    async function uploadSingleFile(file) {
+      showToast(`Importation de "${file.name}"...`, 'info');
+      try {
+        const base64 = await fileToBase64(file);
+        await api('POST', '/api/files', {
+          name: file.name,
+          content_base64: base64,
+          parent_id: currentFolderId,
+        });
+        showToast(`"${file.name}" importé avec succès`, 'success');
+      } catch (err) {
+        showToast(`Échec import "${file.name}": ${err.message}`, 'error');
+      }
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result;
+          const commaIdx = result.indexOf(',');
+          resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function downloadFile(file) {
+      try {
+        showToast(`Téléchargement de "${file.name}"...`, 'info');
+        const res = await fetch(`/api/files/${file.id}/content?user=${encodeURIComponent(currentUser)}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || res.statusText);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function downloadFileById(id) {
+      const file = allFiles.find(f => f.id === id);
+      if (file) downloadFile(file);
+    }
+
+    // --- Drag & Drop ---
+    function initDragAndDrop() {
+      const dropZone = document.getElementById('drop-zone');
+      const overlay = document.getElementById('drag-overlay');
+
+      ['dragenter', 'dragover'].forEach(name => {
+        window.addEventListener(name, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          overlay.classList.add('active');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(name => {
+        window.addEventListener(name, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          overlay.classList.remove('active');
+        });
+      });
+
+      window.addEventListener('drop', async (e) => {
+        const files = e.dataTransfer.files;
+        if (!files || files.length === 0) return;
+        for (const file of files) {
+          await uploadSingleFile(file);
+        }
+        await refresh();
+      });
+    }
+
+    // --- Toast / Notification Manager ---
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 250);
+      }, 3500);
+    }
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-backdrop.active').forEach(m => m.classList.remove('active'));
+        closeContextMenu();
+      }
+      if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+        e.preventDefault();
+        document.getElementById('search-input').focus();
+      }
+    });
+  </script>
 </body>
 </html>
