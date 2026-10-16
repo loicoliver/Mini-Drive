@@ -58,6 +58,9 @@ pip install -e ".[dev]"
 ```bash
 # Créer un dossier
 minidrive mkdir documents
+
+# Lister les dossiers
+minidrive ls
 ```
 
 ### Tests et qualité
@@ -98,6 +101,7 @@ pytest --cov=minidrive --cov-fail-under=85
 
 **Phase 0 (tranche verticale témoin)** :
 - ✅ Créer un dossier (`minidrive mkdir <nom>`)
+- ✅ Lister les dossiers (`minidrive ls`, triés par nom)
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
 - ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)

@@ -10,6 +10,7 @@ from pathlib import Path
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
 from minidrive.adapters.sqlite.folder_repository import SqliteFolderRepository
 from minidrive.application.use_cases.create_folder import CreateFolder
+from minidrive.application.use_cases.list_folders import ListFolders
 
 DEFAULT_DB_PATH = Path.home() / ".minidrive" / "minidrive.db"
 
@@ -45,6 +46,9 @@ class Container:
             folder_repository=self._folder_repository,
             id_generator=self._id_generator,
         )
+        self._list_folders_use_case = ListFolders(
+            folder_repository=self._folder_repository,
+        )
 
     @property
     def db_path(self) -> Path:
@@ -55,6 +59,11 @@ class Container:
     def create_folder(self) -> CreateFolder:
         """Accès au use case CreateFolder."""
         return self._create_folder_use_case
+
+    @property
+    def list_folders(self) -> ListFolders:
+        """Accès au use case ListFolders."""
+        return self._list_folders_use_case
 
 
 def create_container(db_path: Path | str | None = None) -> Container:

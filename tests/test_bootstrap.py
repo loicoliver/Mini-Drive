@@ -24,6 +24,15 @@ class TestBootstrap:
         assert hasattr(use_case, "execute")
         assert callable(use_case.execute)
 
+    def test_container_provides_list_folders(self, tmp_path: Path) -> None:
+        """Le conteneur doit fournir le use case ListFolders, câblé sur le même repo."""
+        container = create_container(db_path=tmp_path / "test.db")
+
+        container.create_folder.execute("test-folder")
+        folders = container.list_folders.execute()
+
+        assert [folder.name.value for folder in folders] == ["test-folder"]
+
     def test_create_folder_is_wired_correctly(self, tmp_path: Path) -> None:
         """Le use case CreateFolder doit être câblé avec les dépendances."""
         container = create_container(db_path=tmp_path / "test.db")

@@ -89,3 +89,19 @@ class SqliteFolderRepository(FolderRepository):
                 (name, parent_id),
             ).fetchone()
         return row is not None
+
+    def list_all(self) -> list[Folder]:
+        """Liste tous les dossiers, triés par nom."""
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT id, name, parent_id FROM folders ORDER BY name"
+            ).fetchall()
+        folders: list[Folder] = []
+        for row in rows:
+            folder_id: str = row[0]
+            folder_name: str = row[1]
+            folder_parent_id: str | None = row[2]
+            folders.append(
+                Folder.create(id=folder_id, name=FileName(folder_name), parent_id=folder_parent_id)
+            )
+        return folders

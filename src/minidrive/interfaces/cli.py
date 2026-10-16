@@ -36,6 +36,12 @@ def build_parser() -> argparse.ArgumentParser:
         description="Créer un nouveau dossier.",
     )
     mkdir_parser.add_argument("nom", help="Nom du dossier à créer")
+
+    subparsers.add_parser(
+        "ls",
+        help="Lister les dossiers",
+        description="Lister tous les dossiers, triés par nom.",
+    )
     return parser
 
 
@@ -61,6 +67,12 @@ def main(argv: list[str] | None = None) -> None:
             folder_name: str = str(args.nom)
             folder = container.create_folder.execute(name=folder_name)
             print(f"✓ Dossier '{folder.name}' créé avec succès (ID: {folder.id})")
+        elif args.command == "ls":
+            folders = container.list_folders.execute()
+            if not folders:
+                print("Aucun dossier.")
+            for folder in folders:
+                print(f"{folder.name} (ID: {folder.id})")
         else:  # Sécurité : argparse rejette déjà les commandes inconnues (exit 2)
             print(f"Commande inconnue: {args.command}")
             sys.exit(1)

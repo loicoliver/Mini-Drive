@@ -32,6 +32,27 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "Dossier 'documents' créé avec succès" in captured.out
 
+    def test_ls_empty_repository(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """ls sur un repository vide doit afficher un message et sortir en code 0."""
+        main(["ls"])
+
+        captured = capsys.readouterr()
+        assert "Aucun dossier." in captured.out
+
+    def test_ls_lists_folders_sorted(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """ls doit afficher les dossiers créés, triés par nom."""
+        main(["mkdir", "videos"])
+        main(["mkdir", "documents"])
+        capsys.readouterr()  # vide le buffer des mkdir
+
+        main(["ls"])
+
+        captured = capsys.readouterr()
+        lines = [line for line in captured.out.splitlines() if line.strip()]
+        assert len(lines) == 2
+        assert lines[0].startswith("documents (ID: ")
+        assert lines[1].startswith("videos (ID: ")
+
     def test_no_command_shows_help(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Lancer minidrive sans commande doit afficher l'aide et sortir en code 1."""
         with pytest.raises(SystemExit) as exc_info:

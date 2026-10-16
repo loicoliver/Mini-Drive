@@ -30,3 +30,7 @@ class InMemoryFolderRepository(FolderRepository):
             folder.name.value == name and folder.parent_id == parent_id
             for folder in self._folders.values()
         )
+
+    def list_all(self) -> list[Folder]:
+        """Liste tous les dossiers, triés par nom."""
+        return sorted(self._folders.values(), key=lambda folder: folder.name.value)

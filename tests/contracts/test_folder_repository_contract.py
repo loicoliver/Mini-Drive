@@ -88,6 +88,26 @@ class FolderRepositoryContract(ABC):
         assert retrieved is not None
         assert retrieved.parent_id == "123"
 
+    def test_list_all_returns_empty_when_no_folder(self, repository: FolderRepository) -> None:
+        """list_all sur un repository vide doit retourner une liste vide."""
+        assert repository.list_all() == []
+
+    def test_list_all_returns_all_folders_sorted_by_name(
+        self, repository: FolderRepository
+    ) -> None:
+        """list_all doit retourner tous les dossiers triés par nom."""
+        repository.add(Folder.create(id="2", name=FileName("images")))
+        repository.add(Folder.create(id="1", name=FileName("documents")))
+        repository.add(Folder.create(id="3", name=FileName("videos"), parent_id="1"))
+
+        folders = repository.list_all()
+
+        assert [folder.name.value for folder in folders] == [
+            "documents",
+            "images",
+            "videos",
+        ]
+
 
 class TestInMemoryFolderRepository(FolderRepositoryContract):
     """Tests concrets pour InMemoryFolderRepository.

@@ -46,6 +46,7 @@ Ce document explique comment les **principes SOLID** et les **design patterns** 
 | Principe | Fichier/Classe | Illustration |
 |----------|----------------|--------------|
 | **S** (Single Responsibility) | `src/minidrive/application/use_cases/create_folder.py` → `CreateFolder` | Une classe = une action métier. Le use case CreateFolder a une seule responsabilité : créer un dossier. |
+| **S** (Single Responsibility) | `src/minidrive/application/use_cases/list_folders.py` → `ListFolders` | Même moule : lister les dossiers, sans connaître le stockage. |
 | **S** (Single Responsibility) | `src/minidrive/domain/value_objects.py` → `FileName` | Le value object FileName a une seule responsabilité : valider et encapsuler un nom de fichier. |
 | **S** (Single Responsibility) | `src/minidrive/domain/entities.py` → `Folder` | L'entité Folder porte uniquement les règles métier d'un dossier. |
 | **O** (Open/Closed) | `src/minidrive/application/quota_policies.py` → `QuotaPolicy` | Ajouter une nouvelle politique (ex: `PremiumQuotaPolicy`) se fait en AJOUTANT une classe, sans modifier les existantes. |

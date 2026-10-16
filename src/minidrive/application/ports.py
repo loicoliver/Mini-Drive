@@ -42,6 +42,15 @@ class FolderRepository(ABC):
         """
         pass
 
+    @abstractmethod
+    def list_all(self) -> list[Folder]:
+        """Liste tous les dossiers, triés par nom.
+
+        Returns:
+            Tous les dossiers persistés, par nom croissant
+        """
+        pass
+
 
 class IdGenerator(ABC):
     """Port pour la génération d'identifiants uniques (pattern Factory)."""
