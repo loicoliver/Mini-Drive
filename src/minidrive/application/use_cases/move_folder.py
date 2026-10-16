@@ -1,7 +1,9 @@
 """Use case pour déplacer un dossier (pattern Use Case / Command)."""
 
+from minidrive.application.access import require_write
 from minidrive.application.folder_tree import descendant_ids
-from minidrive.application.ports import FolderRepository
+from minidrive.application.ports import FolderRepository, ShareRepository
+from minidrive.application.users import DEFAULT_USER_ID
 from minidrive.domain.entities import Folder
 from minidrive.domain.errors import (
     FolderAlreadyExistsError,
@@ -12,28 +14,36 @@ from minidrive.domain.errors import (
 
 
 class MoveFolder:
-    """Use case : déplacer un dossier vers un autre parent (ou la racine)."""
+    """Use case : déplacer un dossier vers un autre parent (propriétaire ou editor)."""
 
-    def __init__(self, folder_repository: FolderRepository) -> None:
+    def __init__(
+        self, folder_repository: FolderRepository, share_repository: ShareRepository
+    ) -> None:
         """Injection de dépendances par constructeur.
 
         Args:
             folder_repository: Port pour la persistance des dossiers
+            share_repository: Port pour la persistance des partages
         """
         self._folder_repository = folder_repository
+        self._share_repository = share_repository
 
-    def execute(self, folder_id: str, new_parent_id: str | None) -> Folder:
+    def execute(
+        self, folder_id: str, new_parent_id: str | None, user_id: str = DEFAULT_USER_ID
+    ) -> Folder:
         """Déplace un dossier.
 
         Args:
             folder_id: Identifiant du dossier à déplacer
             new_parent_id: Nouveau parent (None pour la racine)
+            user_id: Utilisateur agissant (propriétaire ou editor)
 
         Returns:
             Le dossier déplacé
 
         Raises:
             UnknownFolderError: Si l'ID ou le parent est inconnu
+            PermissionDeniedError: Si l'utilisateur ne peut pas écrire
             InvalidMoveError: Si déplacement sur soi-même ou dans un descendant
             FolderAlreadyExistsError: Si un homonyme existe déjà à destination
         """
@@ -42,6 +52,8 @@ class MoveFolder:
             raise UnknownFolderError(folder_id)
         if folder.trashed:
             raise InTrashError(folder_id)
+        role = self._share_repository.role_for("folder", folder_id, user_id)
+        require_write(folder.owner_id, role, user_id, folder_id)
 
         if new_parent_id == folder.parent_id:
             return folder  # no-op : déjà à cet endroit

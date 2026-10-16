@@ -6,6 +6,7 @@ from minidrive.adapters.memory.blob_storage import InMemoryBlobStorage
 from minidrive.adapters.memory.file_repository import InMemoryFileRepository
 from minidrive.adapters.memory.folder_repository import InMemoryFolderRepository
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
+from minidrive.adapters.memory.share_repository import InMemoryShareRepository
 from minidrive.application.quota_policies import UnlimitedQuotaPolicy
 from minidrive.application.use_cases.create_folder import CreateFolder
 from minidrive.application.use_cases.trash_file import RestoreFile, TrashFile
@@ -19,8 +20,8 @@ def folder_setup() -> tuple[TrashFolder, RestoreFolder, CreateFolder, InMemoryFo
     """Corbeille dossiers câblée sur un repository mémoire vierge."""
     repository = InMemoryFolderRepository()
     return (
-        TrashFolder(folder_repository=repository),
-        RestoreFolder(folder_repository=repository),
+        TrashFolder(folder_repository=repository, share_repository=InMemoryShareRepository()),
+        RestoreFolder(folder_repository=repository, share_repository=InMemoryShareRepository()),
         CreateFolder(folder_repository=repository, id_generator=UuidIdGenerator()),
         repository,
     )
@@ -31,8 +32,8 @@ def file_setup() -> tuple[TrashFile, RestoreFile, UploadFile, InMemoryFileReposi
     """Corbeille fichiers câblée sur des adapteurs mémoire vierges."""
     repository = InMemoryFileRepository()
     return (
-        TrashFile(file_repository=repository),
-        RestoreFile(file_repository=repository),
+        TrashFile(file_repository=repository, share_repository=InMemoryShareRepository()),
+        RestoreFile(file_repository=repository, share_repository=InMemoryShareRepository()),
         UploadFile(
             file_repository=repository,
             blob_storage=InMemoryBlobStorage(),

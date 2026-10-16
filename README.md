@@ -135,13 +135,14 @@ pytest --cov=minidrive --cov-fail-under=85
 - ✅ Suppression définitive (`rm`, récursive, blobs + quota libérés)
 - ✅ Propriétaires (`owner_id`, `--utilisateur` / `MINIDRIVE_USER`)
 - ✅ Partage (`share` / `unshare`, rôles reader/editor, owner-only)
+- ✅ Permissions effectives (owner tout, editor écrit, reader lit, sinon refusé)
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
 - ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)
 - ✅ Quotas branchés sur l'upload (mono-utilisateur `local`, `UnlimitedQuotaPolicy` par défaut)
 
 **Fonctionnalités prévues (MVP ultérieur)** :
-- Permissions effectives (enforcement lecteur/éditeur à chaque opération)
+- REST API (pour GUI / mobile)
 - Gestion des quotas par utilisateur
 
 ## 🧪 Tests

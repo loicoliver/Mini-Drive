@@ -6,6 +6,7 @@ from minidrive.adapters.memory.blob_storage import InMemoryBlobStorage
 from minidrive.adapters.memory.file_repository import InMemoryFileRepository
 from minidrive.adapters.memory.folder_repository import InMemoryFolderRepository
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
+from minidrive.adapters.memory.share_repository import InMemoryShareRepository
 from minidrive.application.quota_policies import UnlimitedQuotaPolicy
 from minidrive.application.use_cases.create_folder import CreateFolder
 from minidrive.application.use_cases.move_file import MoveFile
@@ -26,7 +27,7 @@ def folder_setup() -> tuple[MoveFolder, CreateFolder, InMemoryFolderRepository]:
     """MoveFolder câblé sur un repository mémoire vierge."""
     repository = InMemoryFolderRepository()
     return (
-        MoveFolder(folder_repository=repository),
+        MoveFolder(folder_repository=repository, share_repository=InMemoryShareRepository()),
         CreateFolder(folder_repository=repository, id_generator=UuidIdGenerator()),
         repository,
     )
@@ -38,7 +39,11 @@ def file_setup() -> tuple[MoveFile, UploadFile, CreateFolder]:
     folder_repository = InMemoryFolderRepository()
     file_repository = InMemoryFileRepository()
     return (
-        MoveFile(file_repository=file_repository, folder_repository=folder_repository),
+        MoveFile(
+            file_repository=file_repository,
+            folder_repository=folder_repository,
+            share_repository=InMemoryShareRepository(),
+        ),
         UploadFile(
             file_repository=file_repository,
             blob_storage=InMemoryBlobStorage(),

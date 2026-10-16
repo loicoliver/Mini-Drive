@@ -1,5 +1,6 @@
 """Use case pour purger définitivement un fichier (pattern Use Case / Command)."""
 
+from minidrive.application.access import require_write
 from minidrive.application.ports import BlobStorage, FileRepository, ShareRepository
 from minidrive.application.quota_policies import QuotaPolicy
 from minidrive.application.users import DEFAULT_USER_ID
@@ -9,7 +10,8 @@ from minidrive.domain.errors import UnknownFileError
 class PurgeFile:
     """Use case : supprimer définitivement un fichier (métadonnées + blob).
 
-    Libère le quota. Irréversible, contrairement à la corbeille.
+    Libère le quota du propriétaire. Irréversible, contrairement à la corbeille.
+    Réservé au propriétaire ou editor.
     """
 
     def __init__(
@@ -25,7 +27,7 @@ class PurgeFile:
             file_repository: Port pour la persistance des métadonnées
             blob_storage: Port pour le stockage du contenu binaire
             quota_policy: Politique de quota (libération au purge)
-            share_repository: Port des partages (nettoyés au purge)
+            share_repository: Port des partages (contrôle + nettoyage au purge)
         """
         self._file_repository = file_repository
         self._blob_storage = blob_storage
@@ -37,16 +39,19 @@ class PurgeFile:
 
         Args:
             file_id: Identifiant du fichier
-            user_id: Identifiant de l'utilisateur (libération du quota)
+            user_id: Utilisateur agissant (propriétaire ou editor)
 
         Raises:
             UnknownFileError: Si l'ID est inconnu
+            PermissionDeniedError: Si l'utilisateur ne peut pas écrire
         """
         file = self._file_repository.get(file_id)
         if file is None:
             raise UnknownFileError(file_id)
+        role = self._share_repository.role_for("file", file_id, user_id)
+        require_write(file.owner_id, role, user_id, file_id)
 
         self._blob_storage.delete(file_id)
         self._file_repository.delete(file_id)
-        self._quota_policy.record_removal(user_id, file.size.value)
+        self._quota_policy.record_removal(file.owner_id, file.size.value)
         self._share_repository.delete_for_node("file", file_id)

@@ -136,7 +136,9 @@ class TestPurgeFolder:
     def test_purge_trashed_subtree(self, purge_setup: Setup) -> None:
         """Purger un dossier corbeillé doit tout supprimer quand même."""
         purge_folder, _, create_folder, upload_file, folder_repo, _, _, _ = purge_setup
-        trash_folder = TrashFolder(folder_repository=folder_repo)
+        trash_folder = TrashFolder(
+            folder_repository=folder_repo, share_repository=InMemoryShareRepository()
+        )
         parent = create_folder.execute("parent")
         create_folder.execute("enfant", parent_id=parent.id)
         trash_folder.execute(folder_id=parent.id)

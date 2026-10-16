@@ -2,6 +2,7 @@
 
 from minidrive.adapters.memory.folder_repository import InMemoryFolderRepository
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
+from minidrive.adapters.memory.share_repository import InMemoryShareRepository
 from minidrive.application.use_cases.create_folder import CreateFolder
 from minidrive.application.use_cases.list_folders import ListFolders
 
@@ -10,7 +11,7 @@ def make_list_folders() -> tuple[ListFolders, CreateFolder]:
     """Fabrique un ListFolders câblé sur un repository mémoire vierge."""
     repository = InMemoryFolderRepository()
     return (
-        ListFolders(folder_repository=repository),
+        ListFolders(folder_repository=repository, share_repository=InMemoryShareRepository()),
         CreateFolder(folder_repository=repository, id_generator=UuidIdGenerator()),
     )
 

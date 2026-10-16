@@ -5,6 +5,7 @@ import pytest
 from minidrive.adapters.memory.blob_storage import InMemoryBlobStorage
 from minidrive.adapters.memory.file_repository import InMemoryFileRepository
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
+from minidrive.adapters.memory.share_repository import InMemoryShareRepository
 from minidrive.application.quota_policies import UnlimitedQuotaPolicy
 from minidrive.application.use_cases.download_file import DownloadFile
 from minidrive.application.use_cases.upload_file import UploadFile
@@ -16,7 +17,11 @@ def make_download_file() -> tuple[DownloadFile, UploadFile]:
     repository = InMemoryFileRepository()
     blob_storage = InMemoryBlobStorage()
     return (
-        DownloadFile(file_repository=repository, blob_storage=blob_storage),
+        DownloadFile(
+            file_repository=repository,
+            blob_storage=blob_storage,
+            share_repository=InMemoryShareRepository(),
+        ),
         UploadFile(
             file_repository=repository,
             blob_storage=blob_storage,
@@ -61,7 +66,11 @@ class TestDownloadFile:
     def test_download_missing_blob(self) -> None:
         """Métadonnées sans contenu doivent lever UnknownFileError (incohérence)."""
         repository = InMemoryFileRepository()
-        download_file = DownloadFile(file_repository=repository, blob_storage=InMemoryBlobStorage())
+        download_file = DownloadFile(
+            file_repository=repository,
+            blob_storage=InMemoryBlobStorage(),
+            share_repository=InMemoryShareRepository(),
+        )
         upload_file = UploadFile(
             file_repository=repository,
             blob_storage=InMemoryBlobStorage(),  # autre stockage : blob absent

@@ -367,6 +367,33 @@ class TestCLI:
         assert exc_info.value.code == 1
         assert "Partage invalide" in capsys.readouterr().out
 
+    def test_reader_denied_write(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Un reader ne peut pas renommer (Permission refusée, code 1)."""
+        main(["--utilisateur", "alice", "mkdir", "docs"])
+        capsys.readouterr()
+        main(["--utilisateur", "alice", "ls"])
+        folder_id = capsys.readouterr().out.split("ID: ")[1].split(")")[0]
+        capsys.readouterr()
+        main(["--utilisateur", "alice", "share", folder_id, "bob", "reader"])
+        capsys.readouterr()
+
+        with pytest.raises(SystemExit) as exc_info:
+            main(["--utilisateur", "bob", "rename", folder_id, "autre"])
+
+        assert exc_info.value.code == 1
+        assert "Permission refusée" in capsys.readouterr().out
+
+    def test_stranger_ls_empty_but_owner_sees(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Un étranger ne voit rien ; le propriétaire voit tout."""
+        main(["--utilisateur", "alice", "mkdir", "prive"])
+        capsys.readouterr()
+
+        main(["--utilisateur", "mallory", "ls"])
+        assert "Drive vide." in capsys.readouterr().out
+
+        main(["--utilisateur", "alice", "ls"])
+        assert "prive" in capsys.readouterr().out
+
     def test_utilisateur_flag_sets_owner(self, capsys: pytest.CaptureFixture[str]) -> None:
         """--utilisateur définit le propriétaire des créations."""
         main(["--utilisateur", "alice", "mkdir", "docs"])

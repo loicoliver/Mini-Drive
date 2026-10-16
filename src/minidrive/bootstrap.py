@@ -75,6 +75,7 @@ class Container:
         )
         self._list_folders_use_case = ListFolders(
             folder_repository=self._folder_repository,
+            share_repository=self._share_repository,
         )
         self._upload_file_use_case = UploadFile(
             file_repository=self._file_repository,
@@ -84,35 +85,45 @@ class Container:
         )
         self._list_files_use_case = ListFiles(
             file_repository=self._file_repository,
+            share_repository=self._share_repository,
         )
         self._download_file_use_case = DownloadFile(
             file_repository=self._file_repository,
             blob_storage=self._blob_storage,
+            share_repository=self._share_repository,
         )
         self._rename_folder_use_case = RenameFolder(
             folder_repository=self._folder_repository,
+            share_repository=self._share_repository,
         )
         self._rename_file_use_case = RenameFile(
             file_repository=self._file_repository,
+            share_repository=self._share_repository,
         )
         self._move_folder_use_case = MoveFolder(
             folder_repository=self._folder_repository,
+            share_repository=self._share_repository,
         )
         self._move_file_use_case = MoveFile(
             file_repository=self._file_repository,
             folder_repository=self._folder_repository,
+            share_repository=self._share_repository,
         )
         self._trash_folder_use_case = TrashFolder(
             folder_repository=self._folder_repository,
+            share_repository=self._share_repository,
         )
         self._restore_folder_use_case = RestoreFolder(
             folder_repository=self._folder_repository,
+            share_repository=self._share_repository,
         )
         self._trash_file_use_case = TrashFile(
             file_repository=self._file_repository,
+            share_repository=self._share_repository,
         )
         self._restore_file_use_case = RestoreFile(
             file_repository=self._file_repository,
+            share_repository=self._share_repository,
         )
         self._purge_folder_use_case = PurgeFolder(
             folder_repository=self._folder_repository,

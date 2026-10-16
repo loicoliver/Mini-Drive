@@ -176,8 +176,8 @@ def main(argv: list[str] | None = None) -> None:
             folder = container.create_folder.execute(name=folder_name, owner_id=acting_user)
             print(f"✓ Dossier '{folder.name}' créé avec succès (ID: {folder.id})")
         elif args.command == "ls":
-            folders = container.list_folders.execute()
-            files = container.list_files.execute()
+            folders = container.list_folders.execute(user_id=acting_user)
+            files = container.list_files.execute(user_id=acting_user)
             if not folders and not files:
                 print("Drive vide.")
                 return
@@ -199,7 +199,7 @@ def main(argv: list[str] | None = None) -> None:
             print(f"✓ Fichier '{file.name}' uploadé ({file.size}, ID: {file.id})")
         elif args.command == "download":
             file_id: str = str(args.id)
-            file, content = container.download_file.execute(file_id=file_id)
+            file, content = container.download_file.execute(file_id=file_id, user_id=acting_user)
             destination = Path(str(args.vers)) if args.vers is not None else Path(file.name.value)
             if destination.exists():
                 print(f"✗ Erreur: la destination '{destination}' existe déjà")
@@ -211,47 +211,55 @@ def main(argv: list[str] | None = None) -> None:
             new_name: str = str(args.nom)
             if _resolve_node_kind(container, node_id) == "folder":
                 renamed_folder = container.rename_folder.execute(
-                    folder_id=node_id, new_name=new_name
+                    folder_id=node_id, new_name=new_name, user_id=acting_user
                 )
                 print(f"✓ Renommé en '{renamed_folder.name}' (ID: {renamed_folder.id})")
             else:
-                renamed_file = container.rename_file.execute(file_id=node_id, new_name=new_name)
+                renamed_file = container.rename_file.execute(
+                    file_id=node_id, new_name=new_name, user_id=acting_user
+                )
                 print(f"✓ Renommé en '{renamed_file.name}' (ID: {renamed_file.id})")
         elif args.command == "move":
             node_id = str(args.id)
             new_parent: str | None = str(args.vers) if args.vers is not None else None
             if _resolve_node_kind(container, node_id) == "folder":
                 moved_folder = container.move_folder.execute(
-                    folder_id=node_id, new_parent_id=new_parent
+                    folder_id=node_id, new_parent_id=new_parent, user_id=acting_user
                 )
                 where = f"vers '{new_parent}'" if new_parent is not None else "vers la racine"
                 print(f"✓ '{moved_folder.name}' déplacé {where} (ID: {moved_folder.id})")
             else:
-                moved_file = container.move_file.execute(file_id=node_id, new_parent_id=new_parent)
+                moved_file = container.move_file.execute(
+                    file_id=node_id, new_parent_id=new_parent, user_id=acting_user
+                )
                 where = f"vers '{new_parent}'" if new_parent is not None else "vers la racine"
                 print(f"✓ '{moved_file.name}' déplacé {where} (ID: {moved_file.id})")
         elif args.command == "trash":
             node_id = str(args.id)
             if _resolve_node_kind(container, node_id) == "folder":
-                trashed_folder = container.trash_folder.execute(folder_id=node_id)
+                trashed_folder = container.trash_folder.execute(
+                    folder_id=node_id, user_id=acting_user
+                )
                 print(f"✓ '{trashed_folder.name}' mis à la corbeille (ID: {trashed_folder.id})")
             else:
-                trashed_file = container.trash_file.execute(file_id=node_id)
+                trashed_file = container.trash_file.execute(file_id=node_id, user_id=acting_user)
                 print(f"✓ '{trashed_file.name}' mis à la corbeille (ID: {trashed_file.id})")
         elif args.command == "restore":
             node_id = str(args.id)
             if _resolve_node_kind(container, node_id) == "folder":
-                restored_folder = container.restore_folder.execute(folder_id=node_id)
+                restored_folder = container.restore_folder.execute(
+                    folder_id=node_id, user_id=acting_user
+                )
                 print(f"✓ '{restored_folder.name}' restauré (ID: {restored_folder.id})")
             else:
-                restored_file = container.restore_file.execute(file_id=node_id)
+                restored_file = container.restore_file.execute(file_id=node_id, user_id=acting_user)
                 print(f"✓ '{restored_file.name}' restauré (ID: {restored_file.id})")
         elif args.command == "rm":
             node_id = str(args.id)
             if _resolve_node_kind(container, node_id) == "folder":
-                container.purge_folder.execute(folder_id=node_id)
+                container.purge_folder.execute(folder_id=node_id, user_id=acting_user)
             else:
-                container.purge_file.execute(file_id=node_id)
+                container.purge_file.execute(file_id=node_id, user_id=acting_user)
             print(f"✓ '{node_id}' supprimé définitivement")
         elif args.command == "share":
             node_id = str(args.id)

@@ -3,6 +3,7 @@
 from minidrive.adapters.memory.blob_storage import InMemoryBlobStorage
 from minidrive.adapters.memory.file_repository import InMemoryFileRepository
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
+from minidrive.adapters.memory.share_repository import InMemoryShareRepository
 from minidrive.application.quota_policies import UnlimitedQuotaPolicy
 from minidrive.application.use_cases.list_files import ListFiles
 from minidrive.application.use_cases.upload_file import UploadFile
@@ -12,7 +13,7 @@ def make_list_files() -> tuple[ListFiles, UploadFile]:
     """Fabrique un ListFiles câblé sur un repository mémoire vierge."""
     repository = InMemoryFileRepository()
     return (
-        ListFiles(file_repository=repository),
+        ListFiles(file_repository=repository, share_repository=InMemoryShareRepository()),
         UploadFile(
             file_repository=repository,
             blob_storage=InMemoryBlobStorage(),

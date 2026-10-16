@@ -1,5 +1,6 @@
 """Use case pour purger définitivement un dossier (pattern Use Case / Command)."""
 
+from minidrive.application.access import require_write
 from minidrive.application.folder_tree import descendant_ids
 from minidrive.application.ports import (
     BlobStorage,
@@ -16,7 +17,7 @@ class PurgeFolder:
     """Use case : supprimer définitivement un dossier et tout son contenu.
 
     Récursif : fichiers (métadonnées + blobs + quota libéré) et sous-dossiers.
-    Irréversible, contrairement à la corbeille.
+    Irréversible, contrairement à la corbeille. Réservé au propriétaire ou editor.
     """
 
     def __init__(
@@ -34,7 +35,7 @@ class PurgeFolder:
             file_repository: Port pour la persistance des métadonnées
             blob_storage: Port pour le stockage du contenu binaire
             quota_policy: Politique de quota (libération au purge)
-            share_repository: Port des partages (nettoyés au purge)
+            share_repository: Port des partages (contrôle + nettoyage au purge)
         """
         self._folder_repository = folder_repository
         self._file_repository = file_repository
@@ -47,14 +48,18 @@ class PurgeFolder:
 
         Args:
             folder_id: Identifiant du dossier
-            user_id: Identifiant de l'utilisateur (libération du quota)
+            user_id: Utilisateur agissant (propriétaire ou editor)
 
         Raises:
             UnknownFolderError: Si l'ID est inconnu
+            PermissionDeniedError: Si l'utilisateur ne peut pas écrire
         """
         all_folders = self._folder_repository.list_all(include_trashed=True)
-        if all(folder.id != folder_id for folder in all_folders):
+        matches = [folder for folder in all_folders if folder.id == folder_id]
+        if not matches:
             raise UnknownFolderError(folder_id)
+        role = self._share_repository.role_for("folder", folder_id, user_id)
+        require_write(matches[0].owner_id, role, user_id, folder_id)
 
         doomed_folders = descendant_ids(all_folders, folder_id)
         doomed_folders.add(folder_id)
@@ -63,7 +68,7 @@ class PurgeFolder:
             if file.parent_id in doomed_folders:
                 self._blob_storage.delete(file.id)
                 self._file_repository.delete(file.id)
-                self._quota_policy.record_removal(user_id, file.size.value)
+                self._quota_policy.record_removal(file.owner_id, file.size.value)
                 self._share_repository.delete_for_node("file", file.id)
 
         for doomed_id in doomed_folders:
