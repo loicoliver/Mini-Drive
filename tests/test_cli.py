@@ -1,6 +1,7 @@
 """Tests de l'interface CLI (argparse, cross-platform)."""
 
 import sys
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -10,6 +11,11 @@ from minidrive.interfaces.cli import build_parser, ensure_utf8_stdio, main
 
 class TestCLI:
     """Tests de l'interface en ligne de commande."""
+
+    @pytest.fixture(autouse=True)
+    def _isolated_db(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Isole chaque test CLI sur un SQLite temporaire (jamais ~/.minidrive)."""
+        monkeypatch.setenv("MINIDRIVE_DB", str(tmp_path / "cli-test.db"))
 
     def test_mkdir_command_success(self, capsys: pytest.CaptureFixture[str]) -> None:
         """La commande mkdir doit créer un dossier et afficher un message de succès."""

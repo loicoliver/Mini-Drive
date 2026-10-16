@@ -6,6 +6,7 @@ sont interchangeables et doivent respecter le même contrat.
 """
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import pytest
 
@@ -102,12 +103,12 @@ class TestInMemoryFolderRepository(FolderRepositoryContract):
         return InMemoryFolderRepository()
 
 
-# Pour ajouter une nouvelle implémentation (ex: SQLFolderRepository),
-# il suffit de créer une nouvelle classe :
-#
-# class TestSQLFolderRepository(FolderRepositoryContract):
-#     @pytest.fixture
-#     def repository(self) -> FolderRepository:
-#         return SQLFolderRepository(connection_string="...")
-#
-# Tous les tests du contrat seront automatiquement exécutés !
+class TestSqliteFolderRepository(FolderRepositoryContract):
+    """Tests concrets pour SqliteFolderRepository (même contrat, autre implémentation)."""
+
+    @pytest.fixture
+    def repository(self, tmp_path: Path) -> FolderRepository:
+        """Retourne une instance de SqliteFolderRepository sur un fichier isolé."""
+        from minidrive.adapters.sqlite.folder_repository import SqliteFolderRepository
+
+        return SqliteFolderRepository(tmp_path / "contract.db")

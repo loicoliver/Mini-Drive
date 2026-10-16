@@ -100,6 +100,7 @@ pytest --cov=minidrive --cov-fail-under=85
 - ✅ Créer un dossier (`minidrive mkdir <nom>`)
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
+- ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)
 - ✅ Pattern Strategy pour les quotas (démonstration uniquement)
 
 **Fonctionnalités prévues (MVP ultérieur)** :

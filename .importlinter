@@ -14,7 +14,7 @@ layers =
 # interfaces/adapters -> application -> domain
 # bootstrap.py est exclu car il est la composition root qui connaît tout
 ignore_imports =
-    minidrive.bootstrap -> minidrive.adapters.memory.folder_repository
+    minidrive.bootstrap -> minidrive.adapters.sqlite.folder_repository
     minidrive.bootstrap -> minidrive.adapters.memory.id_generator
     minidrive.interfaces.cli -> minidrive.bootstrap
 
@@ -49,5 +49,5 @@ modules =
 # bootstrap.py fait exception car c'est la composition root
 ignore_imports =
     minidrive.interfaces.cli -> minidrive.bootstrap
-    minidrive.bootstrap -> minidrive.adapters.memory.folder_repository
+    minidrive.bootstrap -> minidrive.adapters.sqlite.folder_repository
     minidrive.bootstrap -> minidrive.adapters.memory.id_generator

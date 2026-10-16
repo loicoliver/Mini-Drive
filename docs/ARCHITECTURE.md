@@ -61,7 +61,8 @@ Ce document explique comment les **principes SOLID** et les **design patterns** 
 | Pattern | Fichier/Classe | Problème résolu |
 |---------|----------------|-----------------|
 | **Repository** | `src/minidrive/application/ports.py` → `FolderRepository` | Isoler la logique de persistance du domain. Permet de changer de base de données sans toucher au métier. |
-| **Repository** | `src/minidrive/adapters/memory/folder_repository.py` → `InMemoryFolderRepository` | Implémentation concrète pour les tests et la démonstration. |
+| **Repository** | `src/minidrive/adapters/memory/folder_repository.py` → `InMemoryFolderRepository` | Implémentation volatile pour les tests (isolation, rapidité). |
+| **Repository** | `src/minidrive/adapters/sqlite/folder_repository.py` → `SqliteFolderRepository` | Implémentation persistante pour la CLI (SQLite stdlib, cross-platform). |
 | **Dependency Injection** | `src/minidrive/application/use_cases/create_folder.py` → constructeur `__init__` | Inverser les dépendances (principe D). Les use cases reçoivent leurs dépendances par le constructeur. |
 | **Dependency Injection** | `src/minidrive/bootstrap.py` → `Container` | Centraliser la création et le câblage des dépendances. |
 | **Use Case / Command** | `src/minidrive/application/use_cases/create_folder.py` → `CreateFolder` | Encapsuler une action métier dans une classe avec une méthode `execute()`. |
