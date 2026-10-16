@@ -8,8 +8,15 @@ on:
 
 jobs:
   quality-checks:
-    name: Quality Checks & Tests
-    runs-on: ubuntu-latest
+    name: Quality Checks & Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
     
     steps:
     - name: Checkout code

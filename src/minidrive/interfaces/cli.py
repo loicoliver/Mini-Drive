@@ -1,45 +1,74 @@
 """Interface CLI : point d'entrée utilisateur en ligne de commande."""
 
+import argparse
+import contextlib
 import sys
 
 from minidrive.bootstrap import create_container
 from minidrive.domain.errors import DomainError
 
 
-def main() -> None:
-    """Point d'entrée principal du CLI."""
-    if len(sys.argv) < 2:
-        print("Usage: minidrive <commande> [arguments]")
-        print("Commandes disponibles:")
-        print("  mkdir <nom>  - Créer un nouveau dossier")
+def ensure_utf8_stdio() -> None:
+    """Force stdout/stderr en UTF-8 quand c'est possible (Windows cp1252, etc.).
+
+    Best-effort et cross-platform : ne lève jamais d'exception.
+    À combiner avec PYTHONUTF8=1 / PYTHONIOENCODING=utf-8 dans la CI.
+    """
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            with contextlib.suppress(Exception):
+                reconfigure(encoding="utf-8", errors="replace")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Construit le parser argparse (séparé de main pour les tests)."""
+    parser = argparse.ArgumentParser(
+        prog="minidrive",
+        description="Clone simplifié de Google Drive (démo Clean Architecture).",
+    )
+    subparsers = parser.add_subparsers(dest="command", metavar="<commande>")
+
+    mkdir_parser = subparsers.add_parser(
+        "mkdir",
+        help="Créer un nouveau dossier",
+        description="Créer un nouveau dossier.",
+    )
+    mkdir_parser.add_argument("nom", help="Nom du dossier à créer")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Point d'entrée principal du CLI.
+
+    Args:
+        argv: Arguments sans le nom du programme (sys.argv[1:] si None).
+    """
+    ensure_utf8_stdio()
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.command is None:
+        parser.print_help()
         sys.exit(1)
 
-    command = sys.argv[1]
-
-    # Initialisation du conteneur (composition root)
+    # Composition root : câble les dépendances
     container = create_container()
 
     try:
-        if command == "mkdir":
-            if len(sys.argv) < 3:
-                print("Usage: minidrive mkdir <nom>")
-                sys.exit(1)
-
-            folder_name = sys.argv[2]
-
-            # Exécution du use case
+        if args.command == "mkdir":
+            folder_name: str = str(args.nom)
             folder = container.create_folder.execute(name=folder_name)
-
             print(f"✓ Dossier '{folder.name}' créé avec succès (ID: {folder.id})")
-
-        else:
-            print(f"Commande inconnue: {command}")
+        else:  # Sécurité : argparse rejette déjà les commandes inconnues (exit 2)
+            print(f"Commande inconnue: {args.command}")
             sys.exit(1)
 
     except DomainError as e:
         print(f"✗ Erreur: {e}")
         sys.exit(1)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - on veut un message propre en CLI
         print(f"✗ Erreur inattendue: {e}")
         sys.exit(1)
 

@@ -3,8 +3,31 @@
 Ce test assure que les règles de la Clean Architecture sont respectées.
 """
 
+import shutil
 import subprocess
 import sys
+from pathlib import Path
+
+
+def resolve_lint_imports_cmd() -> list[str]:
+    """Résout la commande lint-imports de façon cross-platform.
+
+    Sur Windows, le dossier Scripts n'est pas toujours sur le PATH,
+    on cherche donc aussi à côté de sys.executable.
+    """
+    found = shutil.which("lint-imports")
+    if found is not None:
+        return [found, "--config", ".importlinter"]
+    exe_dir = Path(sys.executable).parent
+    for candidate in (
+        exe_dir / "lint-imports.exe",
+        exe_dir / "lint-imports",
+        exe_dir / "Scripts" / "lint-imports.exe",
+        exe_dir / "Scripts" / "lint-imports",
+    ):
+        if candidate.exists():
+            return [str(candidate), "--config", ".importlinter"]
+    return ["lint-imports", "--config", ".importlinter"]
 
 
 def test_import_linter_passes() -> None:
@@ -16,7 +39,7 @@ def test_import_linter_passes() -> None:
     - adapters et interfaces s'importent mutuellement
     """
     result = subprocess.run(
-        ["lint-imports", "--config", ".importlinter"],
+        resolve_lint_imports_cmd(),
         capture_output=True,
         text=True,
     )
