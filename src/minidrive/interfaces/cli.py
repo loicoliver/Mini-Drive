@@ -149,6 +149,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     unshare_parser.add_argument("id", help="Identifiant du dossier ou fichier")
     unshare_parser.add_argument("utilisateur", help="Utilisateur à retirer")
+
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Démarrer le serveur HTTP",
+        description="Démarrer le serveur HTTP (mêmes use cases que la CLI).",
+    )
+    serve_parser.add_argument(
+        "--port", type=int, default=8000, help="Port d'écoute (défaut : 8000)"
+    )
     return parser
 
 
@@ -286,6 +295,17 @@ def main(argv: list[str] | None = None) -> None:
                     file_id=node_id, user_id=target_user, owner_id=acting_user
                 )
             print(f"✓ Partage retiré pour '{target_user}'")
+        elif args.command == "serve":
+            from minidrive.interfaces.rest_api import build_server
+
+            server = build_server(port=int(args.port))
+            print(f"Mini-Drive sur http://127.0.0.1:{server.server_port} (Ctrl+C pour arrêter)")
+            try:
+                server.serve_forever()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                server.server_close()
         else:  # Sécurité : argparse rejette déjà les commandes inconnues (exit 2)
             print(f"Commande inconnue: {args.command}")
             sys.exit(1)

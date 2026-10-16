@@ -20,6 +20,7 @@ ignore_imports =
     minidrive.bootstrap -> minidrive.adapters.filesystem.blob_storage
     minidrive.bootstrap -> minidrive.adapters.memory.id_generator
     minidrive.interfaces.cli -> minidrive.bootstrap
+    minidrive.interfaces.rest_api -> minidrive.bootstrap
 
 [importlinter:contract:domain_independence]
 name = Le domain ne doit importer aucune autre couche
@@ -52,6 +53,7 @@ modules =
 # bootstrap.py fait exception car c'est la composition root
 ignore_imports =
     minidrive.interfaces.cli -> minidrive.bootstrap
+    minidrive.interfaces.rest_api -> minidrive.bootstrap
     minidrive.bootstrap -> minidrive.adapters.sqlite.folder_repository
     minidrive.bootstrap -> minidrive.adapters.sqlite.file_repository
     minidrive.bootstrap -> minidrive.adapters.sqlite.share_repository

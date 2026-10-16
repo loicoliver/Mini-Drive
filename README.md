@@ -86,6 +86,9 @@ minidrive unshare <id> bob
 # Agir en tant qu'un autre utilisateur
 minidrive --utilisateur alice mkdir docs-projets
 # ou : MINIDRIVE_USER=alice minidrive mkdir docs-projets
+
+# Démarrer le serveur HTTP (mêmes use cases que la CLI, zéro dépendance)
+minidrive serve --port 8000
 ```
 
 ### Tests et qualité
@@ -136,14 +139,14 @@ pytest --cov=minidrive --cov-fail-under=85
 - ✅ Propriétaires (`owner_id`, `--utilisateur` / `MINIDRIVE_USER`)
 - ✅ Partage (`share` / `unshare`, rôles reader/editor, owner-only)
 - ✅ Permissions effectives (owner tout, editor écrit, reader lit, sinon refusé)
+- ✅ REST API stdlib (`serve`, JSON, mêmes use cases, `?user=`)
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
 - ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)
 - ✅ Quotas branchés sur l'upload (mono-utilisateur `local`, `UnlimitedQuotaPolicy` par défaut)
 
 **Fonctionnalités prévues (MVP ultérieur)** :
-- REST API (pour GUI / mobile)
-- Gestion des quotas par utilisateur
+- Gestion des quotas par utilisateur (limites par rôle via `FixedQuotaPolicy`)
 
 ## 🧪 Tests
 

@@ -1,1 +1,1 @@
-"""Couche Interfaces : points d'entrée utilisateur (CLI, REST API à venir)."""
+"""Couche Interfaces : points d'entrée utilisateur (CLI, REST API)."""

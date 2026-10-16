@@ -78,6 +78,7 @@ Ce document explique comment les **principes SOLID** et les **design patterns** 
 | **Use Case / Command** | `src/minidrive/application/use_cases/purge_folder.py` → `PurgeFolder` | Suppression récursive : lignes + blobs + quota libéré. |
 | **Use Case / Command** | `src/minidrive/application/use_cases/share_folder.py` → `ShareFolder` | Partage owner-only, rôles reader/editor (Strategy-like). |
 | **Policy** | `src/minidrive/application/access.py` → `require_read`, `require_write` | Contrôle owner/editor/reader pur, injecté dans chaque use case via `ShareRepository`. |
+| **Adapter d'entrée** | `src/minidrive/interfaces/rest_api.py` → `DriveHandler` | Mêmes use cases que la CLI, exposés en JSON (stdlib `http.server`, zéro dépendance). |
 | **Factory** | `src/minidrive/domain/entities.py` → `Folder.create()` | Centraliser la création valide d'entités. Garantit qu'un dossier est toujours créé dans un état valide. |
 | **Factory** | `src/minidrive/application/ports.py` → `IdGenerator` | Abstraire la génération d'identifiants. Permet de changer d'algorithme (UUID, Snowflake, etc.) sans impact. |
 | **Strategy** | `src/minidrive/application/quota_policies.py` → `QuotaPolicy` | Encapsuler des algorithmes interchangeables. Permet d'ajouter de nouvelles règles de quota sans modifier le code existant. |
@@ -241,7 +242,6 @@ La recette éprouvée (upload de fichier) pour ajouter une fonctionnalité :
 5. **Bootstrap** : câbler les dépendances
 6. **Interface** : ajouter la commande (ex: `minidrive upload <fichier>`)
 
-Prochaine fonctionnalité candidate : REST API (`interfaces/rest_api.py`)
-pour GUI / mobile — mêmes use cases, nouvelle interface d'entrée.
+Prochaine étape : polish (badges CI, version, packaging vérifié depuis GitHub).
 
 L'architecture reste stable, on ajoute sans modifier.
