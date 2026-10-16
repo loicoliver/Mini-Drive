@@ -1,5 +1,9 @@
 # Mini-Drive
 
+[![CI](https://github.com/loicoliver/Mini-Drive/actions/workflows/ci.yml/badge.svg)](https://github.com/loicoliver/Mini-Drive/actions/workflows/ci.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![Zero runtime deps](https://img.shields.io/badge/deps-0%20runtime-green.svg)](pyproject.toml)
+
 Clone simplifié de Google Drive démontrant une **Clean Architecture** exemplaire.
 
 ## 🎯 Objectif
