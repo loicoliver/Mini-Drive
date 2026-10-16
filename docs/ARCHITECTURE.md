@@ -47,6 +47,7 @@ Ce document explique comment les **principes SOLID** et les **design patterns** 
 |----------|----------------|--------------|
 | **S** (Single Responsibility) | `src/minidrive/application/use_cases/create_folder.py` → `CreateFolder` | Une classe = une action métier. Le use case CreateFolder a une seule responsabilité : créer un dossier. |
 | **S** (Single Responsibility) | `src/minidrive/application/use_cases/list_folders.py` → `ListFolders` | Même moule : lister les dossiers, sans connaître le stockage. |
+| **S** (Single Responsibility) | `src/minidrive/application/use_cases/list_files.py` → `ListFiles` | Même moule, côté fichiers. |
 | **S** (Single Responsibility) | `src/minidrive/domain/value_objects.py` → `FileName` | Le value object FileName a une seule responsabilité : valider et encapsuler un nom de fichier. |
 | **S** (Single Responsibility) | `src/minidrive/domain/value_objects.py` → `FileSize` | Même moule : valider et encapsuler une taille en octets. |
 | **S** (Single Responsibility) | `src/minidrive/domain/entities.py` → `Folder` | L'entité Folder porte uniquement les règles métier d'un dossier. |
@@ -70,6 +71,7 @@ Ce document explique comment les **principes SOLID** et les **design patterns** 
 | **Dependency Injection** | `src/minidrive/bootstrap.py` → `Container` | Centraliser la création et le câblage des dépendances. |
 | **Use Case / Command** | `src/minidrive/application/use_cases/create_folder.py` → `CreateFolder` | Encapsuler une action métier dans une classe avec une méthode `execute()`. |
 | **Use Case / Command** | `src/minidrive/application/use_cases/upload_file.py` → `UploadFile` | Même moule : quota vérifié avant stockage, contenu puis métadonnées puis décompte. |
+| **Use Case / Command** | `src/minidrive/application/use_cases/download_file.py` → `DownloadFile` | Miroir : métadonnées + contenu retournés, écriture disque côté CLI. |
 | **Factory** | `src/minidrive/domain/entities.py` → `Folder.create()` | Centraliser la création valide d'entités. Garantit qu'un dossier est toujours créé dans un état valide. |
 | **Factory** | `src/minidrive/application/ports.py` → `IdGenerator` | Abstraire la génération d'identifiants. Permet de changer d'algorithme (UUID, Snowflake, etc.) sans impact. |
 | **Strategy** | `src/minidrive/application/quota_policies.py` → `QuotaPolicy` | Encapsuler des algorithmes interchangeables. Permet d'ajouter de nouvelles règles de quota sans modifier le code existant. |
@@ -229,7 +231,7 @@ La recette éprouvée (upload de fichier) pour ajouter une fonctionnalité :
 5. **Bootstrap** : câbler les dépendances
 6. **Interface** : ajouter la commande (ex: `minidrive upload <fichier>`)
 
-Prochaine fonctionnalité candidate : `download` (use case `DownloadFile` : métadonnées
-via `FileRepository`, contenu via `BlobStorage`, écriture du fichier cible par la CLI).
+Prochaine fonctionnalité candidate : renommer / déplacer / corbeille
+(use cases `RenameNode`, `MoveNode`, `TrashNode` : nouveaux états et règles métier).
 
 L'architecture reste stable, on ajoute sans modifier.

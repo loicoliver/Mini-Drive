@@ -48,3 +48,11 @@ class QuotaExceededError(DomainError):
         self.user_id = user_id
         self.size_bytes = size_bytes
         super().__init__(f"Quota dépassé pour '{user_id}': {size_bytes} octets demandés")
+
+
+class UnknownFileError(DomainError):
+    """Aucun fichier connu sous cet identifiant (métadonnées ou contenu absent)."""
+
+    def __init__(self, file_id: str) -> None:
+        self.file_id = file_id
+        super().__init__(f"Fichier inconnu : '{file_id}'")

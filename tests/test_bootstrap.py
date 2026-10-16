@@ -45,6 +45,17 @@ class TestBootstrap:
         assert file.size.value == 5
         assert (tmp_path / "blobs" / file.id).read_bytes() == b"hello"
 
+    def test_container_provides_list_and_download_file(self, tmp_path: Path) -> None:
+        """ListFiles et DownloadFile doivent partager le même stockage."""
+        container = create_container(db_path=tmp_path / "test.db")
+        uploaded = container.upload_file.execute(name="a.txt", data=b"hello")
+
+        files = container.list_files.execute()
+        file, data = container.download_file.execute(file_id=uploaded.id)
+
+        assert [item.name.value for item in files] == ["a.txt"]
+        assert data == b"hello"
+
     def test_container_accepts_quota_policy(self, tmp_path: Path) -> None:
         """Le conteneur doit accepter une politique de quota (Strategy interchangeable)."""
         container = create_container(

@@ -13,6 +13,8 @@ from minidrive.adapters.sqlite.file_repository import SqliteFileRepository
 from minidrive.adapters.sqlite.folder_repository import SqliteFolderRepository
 from minidrive.application.quota_policies import QuotaPolicy, UnlimitedQuotaPolicy
 from minidrive.application.use_cases.create_folder import CreateFolder
+from minidrive.application.use_cases.download_file import DownloadFile
+from minidrive.application.use_cases.list_files import ListFiles
 from minidrive.application.use_cases.list_folders import ListFolders
 from minidrive.application.use_cases.upload_file import UploadFile
 
@@ -67,6 +69,13 @@ class Container:
             id_generator=self._id_generator,
             quota_policy=self._quota_policy,
         )
+        self._list_files_use_case = ListFiles(
+            file_repository=self._file_repository,
+        )
+        self._download_file_use_case = DownloadFile(
+            file_repository=self._file_repository,
+            blob_storage=self._blob_storage,
+        )
 
     @property
     def db_path(self) -> Path:
@@ -87,6 +96,16 @@ class Container:
     def upload_file(self) -> UploadFile:
         """Accès au use case UploadFile."""
         return self._upload_file_use_case
+
+    @property
+    def list_files(self) -> ListFiles:
+        """Accès au use case ListFiles."""
+        return self._list_files_use_case
+
+    @property
+    def download_file(self) -> DownloadFile:
+        """Accès au use case DownloadFile."""
+        return self._download_file_use_case
 
 
 def create_container(

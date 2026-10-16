@@ -64,6 +64,9 @@ minidrive ls
 
 # Uploader un fichier
 minidrive upload ./rapport.pdf
+
+# Télécharger un fichier (par son ID vu dans ls)
+minidrive download <id> --vers ./copie.pdf
 ```
 
 ### Tests et qualité
@@ -104,17 +107,16 @@ pytest --cov=minidrive --cov-fail-under=85
 
 **Phase 0 (tranche verticale témoin)** :
 - ✅ Créer un dossier (`minidrive mkdir <nom>`)
-- ✅ Lister les dossiers (`minidrive ls`, triés par nom)
+- ✅ Lister dossiers et fichiers (`minidrive ls`, triés par nom)
 - ✅ Uploader un fichier (`minidrive upload <chemin>`, contenu copié sous `~/.minidrive/blobs/`)
+- ✅ Télécharger un fichier (`minidrive download <id> [--vers <chemin>]`)
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
 - ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)
 - ✅ Quotas branchés sur l'upload (mono-utilisateur `local`, `UnlimitedQuotaPolicy` par défaut)
 
 **Fonctionnalités prévues (MVP ultérieur)** :
-- Télécharger des fichiers
-- Renommer/déplacer
-- Supprimer (avec corbeille)
+- Renommer / déplacer / supprimer (avec corbeille)
 - Partager (lecteur/éditeur)
 - Gestion des quotas par utilisateur
 

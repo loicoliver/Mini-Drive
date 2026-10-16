@@ -33,11 +33,11 @@ class TestCLI:
         assert "Dossier 'documents' créé avec succès" in captured.out
 
     def test_ls_empty_repository(self, capsys: pytest.CaptureFixture[str]) -> None:
-        """ls sur un repository vide doit afficher un message et sortir en code 0."""
+        """ls sur un drive vide doit afficher un message et sortir en code 0."""
         main(["ls"])
 
         captured = capsys.readouterr()
-        assert "Aucun dossier." in captured.out
+        assert "Drive vide." in captured.out
 
     def test_ls_lists_folders_sorted(self, capsys: pytest.CaptureFixture[str]) -> None:
         """ls doit afficher les dossiers créés, triés par nom."""
@@ -49,9 +49,22 @@ class TestCLI:
 
         captured = capsys.readouterr()
         lines = [line for line in captured.out.splitlines() if line.strip()]
-        assert len(lines) == 2
-        assert lines[0].startswith("documents (ID: ")
-        assert lines[1].startswith("videos (ID: ")
+        assert lines[0] == "Dossiers :"
+        assert lines[1].startswith("  documents (ID: ")
+        assert lines[2].startswith("  videos (ID: ")
+
+    def test_ls_lists_files(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        """ls doit afficher les fichiers uploadés avec leur taille."""
+        source = tmp_path / "note.txt"
+        source.write_bytes(b"bonjour")
+        main(["upload", str(source)])
+        capsys.readouterr()
+
+        main(["ls"])
+
+        captured = capsys.readouterr()
+        assert "Fichiers :" in captured.out
+        assert "note.txt (7 octets, ID: " in captured.out
 
     def test_no_command_shows_help(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Lancer minidrive sans commande doit afficher l'aide et sortir en code 1."""
@@ -138,6 +151,79 @@ class TestCLI:
             main(["upload", str(source)])
 
         assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "existe déjà" in captured.out
+
+    def test_download_success(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """download doit écrire le contenu à la destination demandée."""
+        source = tmp_path / "origine.txt"
+        source.write_bytes(b"abc")
+        main(["upload", str(source)])
+        capsys.readouterr()
+        monkeypatch.chdir(tmp_path)
+
+        main(["ls"])  # repère l'ID via la sortie
+        out = capsys.readouterr().out
+        file_id = out.split("ID: ")[1].split(")")[0]
+        destination = tmp_path / "copie.txt"
+
+        main(["download", file_id, "--vers", str(destination)])
+
+        assert destination.read_bytes() == b"abc"
+        captured = capsys.readouterr()
+        assert "téléchargé vers" in captured.out
+
+    def test_download_default_destination(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sans --vers, download écrit le nom d'origine dans le dossier courant."""
+        source = tmp_path / "sub" / "doc.txt"
+        source.parent.mkdir()
+        source.write_bytes(b"data")
+        main(["upload", str(source)])
+        capsys.readouterr()
+        workdir = tmp_path / "work"
+        workdir.mkdir()
+        monkeypatch.chdir(workdir)
+        main(["ls"])
+        out = capsys.readouterr().out
+        file_id = out.split("ID: ")[1].split(")")[0]
+
+        main(["download", file_id])
+
+        assert (workdir / "doc.txt").read_bytes() == b"data"
+
+    def test_download_unknown_id(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """download d'un ID inconnu doit afficher une erreur et sortir en code 1."""
+        with pytest.raises(SystemExit) as exc_info:
+            main(["download", "inexistant"])
+
+        assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "Fichier inconnu" in captured.out
+
+    def test_download_refuses_existing_destination(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """download ne doit jamais écraser un fichier existant."""
+        source = tmp_path / "a.txt"
+        source.write_bytes(b"nouveau")
+        main(["upload", str(source)])
+        capsys.readouterr()
+        main(["ls"])
+        out = capsys.readouterr().out
+        file_id = out.split("ID: ")[1].split(")")[0]
+        existing = tmp_path / "cible.txt"
+        existing.write_bytes(b"precieux")
+
+        with pytest.raises(SystemExit) as exc_info:
+            main(["download", file_id, "--vers", str(existing)])
+
+        assert exc_info.value.code == 1
+        assert existing.read_bytes() == b"precieux"
         captured = capsys.readouterr()
         assert "existe déjà" in captured.out
 

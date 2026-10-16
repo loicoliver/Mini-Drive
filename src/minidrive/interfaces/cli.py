@@ -40,8 +40,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser(
         "ls",
-        help="Lister les dossiers",
-        description="Lister tous les dossiers, triés par nom.",
+        help="Lister dossiers et fichiers",
+        description="Lister tous les dossiers et fichiers, triés par nom.",
     )
 
     upload_parser = subparsers.add_parser(
@@ -50,6 +50,18 @@ def build_parser() -> argparse.ArgumentParser:
         description="Uploader un fichier local dans le drive.",
     )
     upload_parser.add_argument("chemin", help="Chemin du fichier local à uploader")
+
+    download_parser = subparsers.add_parser(
+        "download",
+        help="Télécharger un fichier",
+        description="Télécharger un fichier du drive vers le disque local.",
+    )
+    download_parser.add_argument("id", help="Identifiant du fichier à télécharger")
+    download_parser.add_argument(
+        "--vers",
+        default=None,
+        help="Chemin de destination (défaut : nom du fichier dans le dossier courant)",
+    )
     return parser
 
 
@@ -77,10 +89,18 @@ def main(argv: list[str] | None = None) -> None:
             print(f"✓ Dossier '{folder.name}' créé avec succès (ID: {folder.id})")
         elif args.command == "ls":
             folders = container.list_folders.execute()
-            if not folders:
-                print("Aucun dossier.")
-            for folder in folders:
-                print(f"{folder.name} (ID: {folder.id})")
+            files = container.list_files.execute()
+            if not folders and not files:
+                print("Drive vide.")
+                return
+            if folders:
+                print("Dossiers :")
+                for folder in folders:
+                    print(f"  {folder.name} (ID: {folder.id})")
+            if files:
+                print("Fichiers :")
+                for file in files:
+                    print(f"  {file.name} ({file.size}, ID: {file.id})")
         elif args.command == "upload":
             source = Path(str(args.chemin))
             if not source.is_file():
@@ -89,6 +109,15 @@ def main(argv: list[str] | None = None) -> None:
             data = source.read_bytes()
             file = container.upload_file.execute(name=source.name, data=data)
             print(f"✓ Fichier '{file.name}' uploadé ({file.size}, ID: {file.id})")
+        elif args.command == "download":
+            file_id: str = str(args.id)
+            file, content = container.download_file.execute(file_id=file_id)
+            destination = Path(str(args.vers)) if args.vers is not None else Path(file.name.value)
+            if destination.exists():
+                print(f"✗ Erreur: la destination '{destination}' existe déjà")
+                sys.exit(1)
+            destination.write_bytes(content)
+            print(f"✓ Fichier '{file.name}' téléchargé vers '{destination}'")
         else:  # Sécurité : argparse rejette déjà les commandes inconnues (exit 2)
             print(f"Commande inconnue: {args.command}")
             sys.exit(1)
