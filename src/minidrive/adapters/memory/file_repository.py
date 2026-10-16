@@ -28,3 +28,7 @@ class InMemoryFileRepository(FileRepository):
     def list_all(self) -> list[File]:
         """Liste tous les fichiers, triés par nom."""
         return sorted(self._files.values(), key=lambda file: file.name.value)
+
+    def save(self, file: File) -> None:
+        """Crée ou remplace un fichier (upsert par identifiant)."""
+        self._files[file.id] = file

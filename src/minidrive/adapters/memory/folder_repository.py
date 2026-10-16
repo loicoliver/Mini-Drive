@@ -34,3 +34,7 @@ class InMemoryFolderRepository(FolderRepository):
     def list_all(self) -> list[Folder]:
         """Liste tous les dossiers, triés par nom."""
         return sorted(self._folders.values(), key=lambda folder: folder.name.value)
+
+    def save(self, folder: Folder) -> None:
+        """Crée ou remplace un dossier (upsert par identifiant)."""
+        self._folders[folder.id] = folder

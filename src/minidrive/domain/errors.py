@@ -56,3 +56,20 @@ class UnknownFileError(DomainError):
     def __init__(self, file_id: str) -> None:
         self.file_id = file_id
         super().__init__(f"Fichier inconnu : '{file_id}'")
+
+
+class UnknownFolderError(DomainError):
+    """Aucun dossier connu sous cet identifiant."""
+
+    def __init__(self, folder_id: str) -> None:
+        self.folder_id = folder_id
+        super().__init__(f"Dossier inconnu : '{folder_id}'")
+
+
+class InvalidMoveError(DomainError):
+    """Déplacement impossible (sur soi-même ou dans un descendant)."""
+
+    def __init__(self, node_id: str, reason: str) -> None:
+        self.node_id = node_id
+        self.reason = reason
+        super().__init__(f"Déplacement impossible pour '{node_id}': {reason}")

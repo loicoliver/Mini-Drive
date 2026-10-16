@@ -16,6 +16,10 @@ from minidrive.application.use_cases.create_folder import CreateFolder
 from minidrive.application.use_cases.download_file import DownloadFile
 from minidrive.application.use_cases.list_files import ListFiles
 from minidrive.application.use_cases.list_folders import ListFolders
+from minidrive.application.use_cases.move_file import MoveFile
+from minidrive.application.use_cases.move_folder import MoveFolder
+from minidrive.application.use_cases.rename_file import RenameFile
+from minidrive.application.use_cases.rename_folder import RenameFolder
 from minidrive.application.use_cases.upload_file import UploadFile
 
 DEFAULT_DB_PATH = Path.home() / ".minidrive" / "minidrive.db"
@@ -76,6 +80,19 @@ class Container:
             file_repository=self._file_repository,
             blob_storage=self._blob_storage,
         )
+        self._rename_folder_use_case = RenameFolder(
+            folder_repository=self._folder_repository,
+        )
+        self._rename_file_use_case = RenameFile(
+            file_repository=self._file_repository,
+        )
+        self._move_folder_use_case = MoveFolder(
+            folder_repository=self._folder_repository,
+        )
+        self._move_file_use_case = MoveFile(
+            file_repository=self._file_repository,
+            folder_repository=self._folder_repository,
+        )
 
     @property
     def db_path(self) -> Path:
@@ -106,6 +123,26 @@ class Container:
     def download_file(self) -> DownloadFile:
         """Accès au use case DownloadFile."""
         return self._download_file_use_case
+
+    @property
+    def rename_folder(self) -> RenameFolder:
+        """Accès au use case RenameFolder."""
+        return self._rename_folder_use_case
+
+    @property
+    def rename_file(self) -> RenameFile:
+        """Accès au use case RenameFile."""
+        return self._rename_file_use_case
+
+    @property
+    def move_folder(self) -> MoveFolder:
+        """Accès au use case MoveFolder."""
+        return self._move_folder_use_case
+
+    @property
+    def move_file(self) -> MoveFile:
+        """Accès au use case MoveFile."""
+        return self._move_file_use_case
 
 
 def create_container(

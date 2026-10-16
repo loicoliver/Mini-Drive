@@ -92,3 +92,11 @@ class SqliteFolderRepository(FolderRepository):
                 Folder.create(id=folder_id, name=FileName(folder_name), parent_id=folder_parent_id)
             )
         return folders
+
+    def save(self, folder: Folder) -> None:
+        """Crée ou remplace un dossier (upsert par identifiant)."""
+        with connect(self._db_path) as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO folders (id, name, parent_id) VALUES (?, ?, ?)",
+                (folder.id, folder.name.value, folder.parent_id),
+            )

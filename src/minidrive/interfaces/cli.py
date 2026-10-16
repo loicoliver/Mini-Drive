@@ -5,8 +5,20 @@ import contextlib
 import sys
 from pathlib import Path
 
-from minidrive.bootstrap import create_container
+from minidrive.bootstrap import Container, create_container
 from minidrive.domain.errors import DomainError
+
+
+def _resolve_node_kind(container: Container, node_id: str) -> str:
+    """Détermine si un ID désigne un dossier ou un fichier (exit 1 si inconnu)."""
+    for folder in container.list_folders.execute():
+        if folder.id == node_id:
+            return "folder"
+    for file in container.list_files.execute():
+        if file.id == node_id:
+            return "file"
+    print(f"✗ Erreur: ID inconnu '{node_id}'")
+    sys.exit(1)
 
 
 def ensure_utf8_stdio() -> None:
@@ -61,6 +73,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--vers",
         default=None,
         help="Chemin de destination (défaut : nom du fichier dans le dossier courant)",
+    )
+
+    rename_parser = subparsers.add_parser(
+        "rename",
+        help="Renommer un dossier ou un fichier",
+        description="Renommer un dossier ou un fichier par son ID.",
+    )
+    rename_parser.add_argument("id", help="Identifiant du dossier ou fichier")
+    rename_parser.add_argument("nom", help="Nouveau nom")
+
+    move_parser = subparsers.add_parser(
+        "move",
+        help="Déplacer un dossier ou un fichier",
+        description="Déplacer un dossier ou un fichier vers un dossier parent.",
+    )
+    move_parser.add_argument("id", help="Identifiant du dossier ou fichier")
+    move_parser.add_argument(
+        "--vers",
+        default=None,
+        help="ID du dossier de destination (défaut : racine)",
     )
     return parser
 
@@ -118,6 +150,30 @@ def main(argv: list[str] | None = None) -> None:
                 sys.exit(1)
             destination.write_bytes(content)
             print(f"✓ Fichier '{file.name}' téléchargé vers '{destination}'")
+        elif args.command == "rename":
+            node_id: str = str(args.id)
+            new_name: str = str(args.nom)
+            if _resolve_node_kind(container, node_id) == "folder":
+                renamed_folder = container.rename_folder.execute(
+                    folder_id=node_id, new_name=new_name
+                )
+                print(f"✓ Renommé en '{renamed_folder.name}' (ID: {renamed_folder.id})")
+            else:
+                renamed_file = container.rename_file.execute(file_id=node_id, new_name=new_name)
+                print(f"✓ Renommé en '{renamed_file.name}' (ID: {renamed_file.id})")
+        elif args.command == "move":
+            node_id = str(args.id)
+            new_parent: str | None = str(args.vers) if args.vers is not None else None
+            if _resolve_node_kind(container, node_id) == "folder":
+                moved_folder = container.move_folder.execute(
+                    folder_id=node_id, new_parent_id=new_parent
+                )
+                where = f"vers '{new_parent}'" if new_parent is not None else "vers la racine"
+                print(f"✓ '{moved_folder.name}' déplacé {where} (ID: {moved_folder.id})")
+            else:
+                moved_file = container.move_file.execute(file_id=node_id, new_parent_id=new_parent)
+                where = f"vers '{new_parent}'" if new_parent is not None else "vers la racine"
+                print(f"✓ '{moved_file.name}' déplacé {where} (ID: {moved_file.id})")
         else:  # Sécurité : argparse rejette déjà les commandes inconnues (exit 2)
             print(f"Commande inconnue: {args.command}")
             sys.exit(1)

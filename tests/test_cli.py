@@ -227,6 +227,73 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "existe déjà" in captured.out
 
+    def test_rename_folder(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """rename doit renommer un dossier par son ID."""
+        main(["mkdir", "ancien"])
+        capsys.readouterr()
+        main(["ls"])
+        folder_id = capsys.readouterr().out.split("ID: ")[1].split(")")[0]
+        capsys.readouterr()
+
+        main(["rename", folder_id, "nouveau"])
+
+        captured = capsys.readouterr()
+        assert "Renommé en 'nouveau'" in captured.out
+
+    def test_rename_file(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        """rename doit renommer un fichier par son ID."""
+        source = tmp_path / "a.txt"
+        source.write_bytes(b"x")
+        main(["upload", str(source)])
+        capsys.readouterr()
+        main(["ls"])
+        file_id = capsys.readouterr().out.split("ID: ")[1].split(")")[0]
+        capsys.readouterr()
+
+        main(["rename", file_id, "b.txt"])
+
+        captured = capsys.readouterr()
+        assert "Renommé en 'b.txt'" in captured.out
+
+    def test_rename_unknown_id(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """rename d'un ID inconnu doit afficher une erreur et sortir en code 1."""
+        with pytest.raises(SystemExit) as exc_info:
+            main(["rename", "inconnu", "x"])
+
+        assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "ID inconnu" in captured.out
+
+    def test_move_folder_to_root(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """move sans --vers doit remonter à la racine."""
+        main(["mkdir", "parent"])
+        main(["mkdir", "enfant"])
+        capsys.readouterr()
+        main(["ls"])
+        out = capsys.readouterr().out
+        capsys.readouterr()
+
+        main(["move", out.split("ID: ")[1].split(")")[0]])
+
+        captured = capsys.readouterr()
+        assert "vers la racine" in captured.out
+
+    def test_move_to_parent(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """move --vers doit déplacer vers le dossier indiqué."""
+        main(["mkdir", "parent"])
+        main(["mkdir", "enfant"])
+        capsys.readouterr()
+        main(["ls"])
+        out = capsys.readouterr().out
+        ids = [part.split(")")[0] for part in out.split("ID: ")[1:]]
+        capsys.readouterr()
+
+        main(["move", ids[0], "--vers", ids[1]])
+
+        captured = capsys.readouterr()
+        assert "déplacé vers" in captured.out
+
     def test_help_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
         """-h / --help doit afficher l'aide et sortir en code 0."""
         with pytest.raises(SystemExit) as exc_info:

@@ -88,6 +88,24 @@ class FolderRepositoryContract(ABC):
         assert retrieved is not None
         assert retrieved.parent_id == "123"
 
+    def test_save_updates_existing_folder(self, repository: FolderRepository) -> None:
+        """save doit remplacer le dossier de même ID (rename/move)."""
+        repository.add(Folder.create(id="1", name=FileName("ancien")))
+
+        updated = Folder.create(id="1", name=FileName("nouveau"), parent_id="p1")
+        repository.save(updated)
+
+        retrieved = repository.get("1")
+        assert retrieved is not None
+        assert retrieved.name.value == "nouveau"
+        assert retrieved.parent_id == "p1"
+
+    def test_save_creates_missing_folder(self, repository: FolderRepository) -> None:
+        """save sur un ID inconnu doit créer (sémantique upsert)."""
+        repository.save(Folder.create(id="9", name=FileName("cree")))
+
+        assert repository.get("9") is not None
+
     def test_list_all_returns_empty_when_no_folder(self, repository: FolderRepository) -> None:
         """list_all sur un repository vide doit retourner une liste vide."""
         assert repository.list_all() == []

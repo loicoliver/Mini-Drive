@@ -66,6 +66,25 @@ class FileRepositoryContract(ABC):
         """list_all sur un repository vide doit retourner une liste vide."""
         assert repository.list_all() == []
 
+    def test_save_updates_existing_file(self, repository: FileRepository) -> None:
+        """save doit remplacer le fichier de même ID (rename/move)."""
+        repository.add(make_file(file_id="1", name="ancien.txt"))
+
+        updated = make_file(file_id="1", name="nouveau.txt", parent_id="p1")
+        repository.save(updated)
+
+        retrieved = repository.get("1")
+        assert retrieved is not None
+        assert retrieved.name.value == "nouveau.txt"
+        assert retrieved.parent_id == "p1"
+        assert retrieved.size.value == 1024
+
+    def test_save_creates_missing_file(self, repository: FileRepository) -> None:
+        """save sur un ID inconnu doit créer (sémantique upsert)."""
+        repository.save(make_file(file_id="9", name="cree.txt"))
+
+        assert repository.get("9") is not None
+
 
 class TestInMemoryFileRepository(FileRepositoryContract):
     """Tests concrets pour InMemoryFileRepository."""

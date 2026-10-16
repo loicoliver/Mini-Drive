@@ -92,3 +92,12 @@ class SqliteFileRepository(FileRepository):
                 )
             )
         return files
+
+    def save(self, file: File) -> None:
+        """Crée ou remplace un fichier (upsert par identifiant)."""
+        with connect(self._db_path) as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO files (id, name, parent_id, size_bytes)"
+                " VALUES (?, ?, ?, ?)",
+                (file.id, file.name.value, file.parent_id, file.size.value),
+            )

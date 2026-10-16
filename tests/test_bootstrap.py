@@ -66,6 +66,20 @@ class TestBootstrap:
         with pytest.raises(QuotaExceededError):
             container.upload_file.execute(name="ko.txt", data=b"12345")
 
+    def test_container_provides_rename_and_move(self, tmp_path: Path) -> None:
+        """Le conteneur doit fournir les use cases rename/move, câblés ensemble."""
+        container = create_container(db_path=tmp_path / "test.db")
+        folder = container.create_folder.execute("dossier")
+        uploaded = container.upload_file.execute(name="a.txt", data=b"1")
+
+        renamed = container.rename_folder.execute(folder_id=folder.id, new_name="renomme")
+        moved = container.move_file.execute(file_id=uploaded.id, new_parent_id=folder.id)
+
+        assert renamed.name.value == "renomme"
+        assert moved.parent_id == folder.id
+        assert container.rename_file is not None
+        assert container.move_folder is not None
+
     def test_create_folder_is_wired_correctly(self, tmp_path: Path) -> None:
         """Le use case CreateFolder doit être câblé avec les dépendances."""
         container = create_container(db_path=tmp_path / "test.db")

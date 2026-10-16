@@ -72,6 +72,8 @@ Ce document explique comment les **principes SOLID** et les **design patterns** 
 | **Use Case / Command** | `src/minidrive/application/use_cases/create_folder.py` → `CreateFolder` | Encapsuler une action métier dans une classe avec une méthode `execute()`. |
 | **Use Case / Command** | `src/minidrive/application/use_cases/upload_file.py` → `UploadFile` | Même moule : quota vérifié avant stockage, contenu puis métadonnées puis décompte. |
 | **Use Case / Command** | `src/minidrive/application/use_cases/download_file.py` → `DownloadFile` | Miroir : métadonnées + contenu retournés, écriture disque côté CLI. |
+| **Use Case / Command** | `src/minidrive/application/use_cases/rename_folder.py` → `RenameFolder` | Même moule : get → valider → doublon → save (upsert). |
+| **Use Case / Command** | `src/minidrive/application/use_cases/move_folder.py` → `MoveFolder` | Plus garde anti-cycle par parcours mémoire (aucun nouveau port requis). |
 | **Factory** | `src/minidrive/domain/entities.py` → `Folder.create()` | Centraliser la création valide d'entités. Garantit qu'un dossier est toujours créé dans un état valide. |
 | **Factory** | `src/minidrive/application/ports.py` → `IdGenerator` | Abstraire la génération d'identifiants. Permet de changer d'algorithme (UUID, Snowflake, etc.) sans impact. |
 | **Strategy** | `src/minidrive/application/quota_policies.py` → `QuotaPolicy` | Encapsuler des algorithmes interchangeables. Permet d'ajouter de nouvelles règles de quota sans modifier le code existant. |
@@ -231,7 +233,8 @@ La recette éprouvée (upload de fichier) pour ajouter une fonctionnalité :
 5. **Bootstrap** : câbler les dépendances
 6. **Interface** : ajouter la commande (ex: `minidrive upload <fichier>`)
 
-Prochaine fonctionnalité candidate : renommer / déplacer / corbeille
-(use cases `RenameNode`, `MoveNode`, `TrashNode` : nouveaux états et règles métier).
+Prochaine fonctionnalité candidate : corbeille + purge
+(use cases `TrashNode`, `RestoreNode`, `DeleteNode` : soft-delete via colonne
+`trashed_at`, suppression définitive + blob, décompte quota inversé).
 
 L'architecture reste stable, on ajoute sans modifier.

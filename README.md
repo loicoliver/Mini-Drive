@@ -67,6 +67,12 @@ minidrive upload ./rapport.pdf
 
 # Télécharger un fichier (par son ID vu dans ls)
 minidrive download <id> --vers ./copie.pdf
+
+# Renommer (dossier ou fichier, par ID)
+minidrive rename <id> nouveau-nom
+
+# Déplacer (vers un dossier, ou la racine sans --vers)
+minidrive move <id> --vers <dossier-id>
 ```
 
 ### Tests et qualité
@@ -110,13 +116,15 @@ pytest --cov=minidrive --cov-fail-under=85
 - ✅ Lister dossiers et fichiers (`minidrive ls`, triés par nom)
 - ✅ Uploader un fichier (`minidrive upload <chemin>`, contenu copié sous `~/.minidrive/blobs/`)
 - ✅ Télécharger un fichier (`minidrive download <id> [--vers <chemin>]`)
+- ✅ Renommer (`minidrive rename <id> <nom>`, dossiers et fichiers)
+- ✅ Déplacer (`minidrive move <id> [--vers <dossier-id>]`, garde anti-cycle)
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
 - ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)
 - ✅ Quotas branchés sur l'upload (mono-utilisateur `local`, `UnlimitedQuotaPolicy` par défaut)
 
 **Fonctionnalités prévues (MVP ultérieur)** :
-- Renommer / déplacer / supprimer (avec corbeille)
+- Supprimer (avec corbeille)
 - Partager (lecteur/éditeur)
 - Gestion des quotas par utilisateur
 

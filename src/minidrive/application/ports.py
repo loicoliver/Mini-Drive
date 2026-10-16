@@ -51,6 +51,15 @@ class FolderRepository(ABC):
         """
         pass
 
+    @abstractmethod
+    def save(self, folder: Folder) -> None:
+        """Crée ou remplace un dossier (upsert par identifiant).
+
+        Args:
+            folder: Le dossier à persister (remplace celui de même ID)
+        """
+        pass
+
 
 class IdGenerator(ABC):
     """Port pour la génération d'identifiants uniques (pattern Factory)."""
@@ -108,6 +117,15 @@ class FileRepository(ABC):
 
         Returns:
             Tous les fichiers persistés, par nom croissant
+        """
+        pass
+
+    @abstractmethod
+    def save(self, file: File) -> None:
+        """Crée ou remplace un fichier (upsert par identifiant).
+
+        Args:
+            file: Le fichier à persister (remplace celui de même ID)
         """
         pass
 
