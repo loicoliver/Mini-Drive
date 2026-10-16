@@ -7,10 +7,14 @@ Démontre le principe D (Dependency Inversion) : l'injection se fait ici.
 import os
 from pathlib import Path
 
+from minidrive.adapters.filesystem.blob_storage import FilesystemBlobStorage
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
+from minidrive.adapters.sqlite.file_repository import SqliteFileRepository
 from minidrive.adapters.sqlite.folder_repository import SqliteFolderRepository
+from minidrive.application.quota_policies import QuotaPolicy, UnlimitedQuotaPolicy
 from minidrive.application.use_cases.create_folder import CreateFolder
 from minidrive.application.use_cases.list_folders import ListFolders
+from minidrive.application.use_cases.upload_file import UploadFile
 
 DEFAULT_DB_PATH = Path.home() / ".minidrive" / "minidrive.db"
 
@@ -30,16 +34,24 @@ def resolve_db_path() -> Path:
 class Container:
     """Conteneur d'injection de dépendances simplifié."""
 
-    def __init__(self, db_path: Path | str | None = None) -> None:
+    def __init__(
+        self,
+        db_path: Path | str | None = None,
+        quota_policy: QuotaPolicy | None = None,
+    ) -> None:
         """Initialise les adapteurs et use cases.
 
         Args:
             db_path: Chemin SQLite explicite (tests). Si None, resolve_db_path().
+            quota_policy: Politique de quota (UnlimitedQuotaPolicy par défaut).
         """
         self._db_path = Path(db_path) if db_path is not None else resolve_db_path()
         # Adapteurs (implémentations concrètes)
         self._folder_repository = SqliteFolderRepository(self._db_path)
+        self._file_repository = SqliteFileRepository(self._db_path)
+        self._blob_storage = FilesystemBlobStorage(self._db_path.parent / "blobs")
         self._id_generator = UuidIdGenerator()
+        self._quota_policy = quota_policy or UnlimitedQuotaPolicy()
 
         # Use cases (injection par constructeur)
         self._create_folder_use_case = CreateFolder(
@@ -48,6 +60,12 @@ class Container:
         )
         self._list_folders_use_case = ListFolders(
             folder_repository=self._folder_repository,
+        )
+        self._upload_file_use_case = UploadFile(
+            file_repository=self._file_repository,
+            blob_storage=self._blob_storage,
+            id_generator=self._id_generator,
+            quota_policy=self._quota_policy,
         )
 
     @property
@@ -65,14 +83,23 @@ class Container:
         """Accès au use case ListFolders."""
         return self._list_folders_use_case
 
+    @property
+    def upload_file(self) -> UploadFile:
+        """Accès au use case UploadFile."""
+        return self._upload_file_use_case
 
-def create_container(db_path: Path | str | None = None) -> Container:
+
+def create_container(
+    db_path: Path | str | None = None,
+    quota_policy: QuotaPolicy | None = None,
+) -> Container:
     """Factory pour créer le conteneur d'injection.
 
     Args:
         db_path: Chemin SQLite explicite (tests). Si None, resolve_db_path().
+        quota_policy: Politique de quota (UnlimitedQuotaPolicy par défaut).
 
     Returns:
         Un conteneur configuré avec toutes les dépendances
     """
-    return Container(db_path=db_path)
+    return Container(db_path=db_path, quota_policy=quota_policy)

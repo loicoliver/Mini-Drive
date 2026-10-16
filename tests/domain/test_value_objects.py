@@ -2,8 +2,8 @@
 
 import pytest
 
-from minidrive.domain.errors import InvalidFileNameError
-from minidrive.domain.value_objects import FileName
+from minidrive.domain.errors import InvalidFileNameError, InvalidFileSizeError
+from minidrive.domain.value_objects import FileName, FileSize
 
 
 class TestFileName:
@@ -57,3 +57,29 @@ class TestFileName:
         name2 = FileName("test")
         assert name1 == name2
         assert hash(name1) == hash(name2)
+
+
+class TestFileSize:
+    """Tests du value object FileSize."""
+
+    def test_valid_size(self) -> None:
+        """Une taille positive doit être acceptée."""
+        size = FileSize(1024)
+        assert size.value == 1024
+        assert str(size) == "1024 octets"
+
+    def test_zero_size_is_valid(self) -> None:
+        """Un fichier vide (0 octet) doit être accepté."""
+        assert FileSize(0).value == 0
+
+    def test_negative_size_raises_error(self) -> None:
+        """Une taille négative doit lever InvalidFileSizeError."""
+        with pytest.raises(InvalidFileSizeError) as exc_info:
+            FileSize(-1)
+        assert "négative" in str(exc_info.value)
+
+    def test_filesize_is_immutable(self) -> None:
+        """FileSize est un value object immuable (frozen dataclass)."""
+        size = FileSize(10)
+        with pytest.raises(AttributeError):
+            size.value = 20  # type: ignore[misc]

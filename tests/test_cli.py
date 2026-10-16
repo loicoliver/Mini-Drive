@@ -105,6 +105,42 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "Erreur:" in captured.out
 
+    def test_upload_success(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        """upload doit copier le fichier et afficher un message de succès."""
+        source = tmp_path / "note.txt"
+        source.write_bytes(b"bonjour")
+
+        main(["upload", str(source)])
+
+        captured = capsys.readouterr()
+        assert "Fichier 'note.txt' uploadé" in captured.out
+        assert "7 octets" in captured.out
+
+    def test_upload_missing_file(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """upload d'un fichier inexistant doit afficher une erreur et sortir en code 1."""
+        with pytest.raises(SystemExit) as exc_info:
+            main(["upload", "n-existe-pas.txt"])
+
+        assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "introuvable" in captured.out
+
+    def test_upload_then_ls_and_duplicate(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Un fichier uploadé persiste ; le ré-uploader doit échouer (doublon)."""
+        source = tmp_path / "a.bin"
+        source.write_bytes(b"123")
+
+        main(["upload", str(source)])
+        with pytest.raises(SystemExit) as exc_info:
+            main(["upload", str(source)])
+
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "existe déjà" in captured.out
+
     def test_help_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
         """-h / --help doit afficher l'aide et sortir en code 0."""
         with pytest.raises(SystemExit) as exc_info:
@@ -114,6 +150,8 @@ class TestCLI:
 
         captured = capsys.readouterr()
         assert "mkdir" in captured.out
+        assert "ls" in captured.out
+        assert "upload" in captured.out
 
     def test_ensure_utf8_stdio_never_raises(self) -> None:
         """La sécurisation UTF-8 ne doit jamais lever (Windows/macOS/Linux)."""

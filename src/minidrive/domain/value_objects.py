@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from minidrive.domain.errors import InvalidFileNameError
+from minidrive.domain.errors import InvalidFileNameError, InvalidFileSizeError
 
 
 @dataclass(frozen=True)
@@ -24,3 +24,18 @@ class FileName:
 
     def __str__(self) -> str:
         return self.value
+
+
+@dataclass(frozen=True)
+class FileSize:
+    """Taille d'un fichier en octets, validée selon les règles métier."""
+
+    value: int
+
+    def __post_init__(self) -> None:
+        """Valide la taille lors de la création."""
+        if self.value < 0:
+            raise InvalidFileSizeError(self.value, "la taille ne peut pas être négative")
+
+    def __str__(self) -> str:
+        return f"{self.value} octets"

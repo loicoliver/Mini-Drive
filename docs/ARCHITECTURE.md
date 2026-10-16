@@ -48,6 +48,7 @@ Ce document explique comment les **principes SOLID** et les **design patterns** 
 | **S** (Single Responsibility) | `src/minidrive/application/use_cases/create_folder.py` → `CreateFolder` | Une classe = une action métier. Le use case CreateFolder a une seule responsabilité : créer un dossier. |
 | **S** (Single Responsibility) | `src/minidrive/application/use_cases/list_folders.py` → `ListFolders` | Même moule : lister les dossiers, sans connaître le stockage. |
 | **S** (Single Responsibility) | `src/minidrive/domain/value_objects.py` → `FileName` | Le value object FileName a une seule responsabilité : valider et encapsuler un nom de fichier. |
+| **S** (Single Responsibility) | `src/minidrive/domain/value_objects.py` → `FileSize` | Même moule : valider et encapsuler une taille en octets. |
 | **S** (Single Responsibility) | `src/minidrive/domain/entities.py` → `Folder` | L'entité Folder porte uniquement les règles métier d'un dossier. |
 | **O** (Open/Closed) | `src/minidrive/application/quota_policies.py` → `QuotaPolicy` | Ajouter une nouvelle politique (ex: `PremiumQuotaPolicy`) se fait en AJOUTANT une classe, sans modifier les existantes. |
 | **O** (Open/Closed) | `src/minidrive/adapters/memory/folder_repository.py` | Ajouter un nouveau stockage (ex: `SQLFolderRepository`) se fait en ajoutant une classe qui implémente `FolderRepository`. |
@@ -62,11 +63,13 @@ Ce document explique comment les **principes SOLID** et les **design patterns** 
 | Pattern | Fichier/Classe | Problème résolu |
 |---------|----------------|-----------------|
 | **Repository** | `src/minidrive/application/ports.py` → `FolderRepository` | Isoler la logique de persistance du domain. Permet de changer de base de données sans toucher au métier. |
+| **Repository** | `src/minidrive/application/ports.py` → `FileRepository` | Même moule pour les métadonnées de fichiers (nom, taille, parent). |
 | **Repository** | `src/minidrive/adapters/memory/folder_repository.py` → `InMemoryFolderRepository` | Implémentation volatile pour les tests (isolation, rapidité). |
 | **Repository** | `src/minidrive/adapters/sqlite/folder_repository.py` → `SqliteFolderRepository` | Implémentation persistante pour la CLI (SQLite stdlib, cross-platform). |
 | **Dependency Injection** | `src/minidrive/application/use_cases/create_folder.py` → constructeur `__init__` | Inverser les dépendances (principe D). Les use cases reçoivent leurs dépendances par le constructeur. |
 | **Dependency Injection** | `src/minidrive/bootstrap.py` → `Container` | Centraliser la création et le câblage des dépendances. |
 | **Use Case / Command** | `src/minidrive/application/use_cases/create_folder.py` → `CreateFolder` | Encapsuler une action métier dans une classe avec une méthode `execute()`. |
+| **Use Case / Command** | `src/minidrive/application/use_cases/upload_file.py` → `UploadFile` | Même moule : quota vérifié avant stockage, contenu puis métadonnées puis décompte. |
 | **Factory** | `src/minidrive/domain/entities.py` → `Folder.create()` | Centraliser la création valide d'entités. Garantit qu'un dossier est toujours créé dans un état valide. |
 | **Factory** | `src/minidrive/application/ports.py` → `IdGenerator` | Abstraire la génération d'identifiants. Permet de changer d'algorithme (UUID, Snowflake, etc.) sans impact. |
 | **Strategy** | `src/minidrive/application/quota_policies.py` → `QuotaPolicy` | Encapsuler des algorithmes interchangeables. Permet d'ajouter de nouvelles règles de quota sans modifier le code existant. |
@@ -185,11 +188,15 @@ class PremiumQuotaPolicy(QuotaPolicy):
             if user_id in self._premium_users
             else self._standard_quota_bytes
         )
+
+    def record_upload(self, user_id: str, file_size_bytes: int) -> None:
+        # Décompter ici (ex: self._used_space[user_id] += file_size_bytes)
+        ...
 ```
 
 2. Aucune modification dans `FixedQuotaPolicy`, `UnlimitedQuotaPolicy` ou les use cases.
 
-3. Dans `bootstrap.py`, choisir quelle politique utiliser :
+3. Dans `bootstrap.py`, choisir quelle politique injecter :
 
 ```python
 # Avant
@@ -213,13 +220,16 @@ policy = PremiumQuotaPolicy(
 
 ## 🚀 Évolution future
 
-Pour ajouter une nouvelle fonctionnalité (ex: upload de fichier) :
+La recette éprouvée (upload de fichier) pour ajouter une fonctionnalité :
 
-1. **Domain** : créer `File` (entité) et `FileSize` (value object)
-2. **Application** : créer `FileRepository` (port) et `UploadFile` (use case)
-3. **Adapters** : implémenter `InMemoryFileRepository` et `S3FileRepository`
-4. **Tests** : écrire `FileRepositoryContract` pour garantir Liskov
+1. **Domain** : entités + value objects (ex: `File`, `FileSize`)
+2. **Application** : ports (ex: `FileRepository`) + use case (ex: `UploadFile`)
+3. **Adapters** : implémentations mémoire (tests) + réelles (ex: `FilesystemBlobStorage`)
+4. **Tests** : contracts (`FileRepositoryContract`, `BlobStorageContract`) pour garantir Liskov
 5. **Bootstrap** : câbler les dépendances
-6. **Interface** : ajouter la commande `minidrive upload <fichier>`
+6. **Interface** : ajouter la commande (ex: `minidrive upload <fichier>`)
+
+Prochaine fonctionnalité candidate : `download` (use case `DownloadFile` : métadonnées
+via `FileRepository`, contenu via `BlobStorage`, écriture du fichier cible par la CLI).
 
 L'architecture reste stable, on ajoute sans modifier.

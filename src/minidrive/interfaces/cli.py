@@ -3,6 +3,7 @@
 import argparse
 import contextlib
 import sys
+from pathlib import Path
 
 from minidrive.bootstrap import create_container
 from minidrive.domain.errors import DomainError
@@ -42,6 +43,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Lister les dossiers",
         description="Lister tous les dossiers, triés par nom.",
     )
+
+    upload_parser = subparsers.add_parser(
+        "upload",
+        help="Uploader un fichier",
+        description="Uploader un fichier local dans le drive.",
+    )
+    upload_parser.add_argument("chemin", help="Chemin du fichier local à uploader")
     return parser
 
 
@@ -73,6 +81,14 @@ def main(argv: list[str] | None = None) -> None:
                 print("Aucun dossier.")
             for folder in folders:
                 print(f"{folder.name} (ID: {folder.id})")
+        elif args.command == "upload":
+            source = Path(str(args.chemin))
+            if not source.is_file():
+                print(f"✗ Erreur: fichier introuvable '{source}'")
+                sys.exit(1)
+            data = source.read_bytes()
+            file = container.upload_file.execute(name=source.name, data=data)
+            print(f"✓ Fichier '{file.name}' uploadé ({file.size}, ID: {file.id})")
         else:  # Sécurité : argparse rejette déjà les commandes inconnues (exit 2)
             print(f"Commande inconnue: {args.command}")
             sys.exit(1)

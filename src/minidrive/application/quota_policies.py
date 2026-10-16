@@ -35,6 +35,16 @@ class QuotaPolicy(ABC):
         """
         pass
 
+    @abstractmethod
+    def record_upload(self, user_id: str, file_size_bytes: int) -> None:
+        """Enregistre un upload pour décompter le quota de l'utilisateur.
+
+        Args:
+            user_id: Identifiant de l'utilisateur
+            file_size_bytes: Taille du fichier uploadé en octets
+        """
+        pass
+
 
 class FixedQuotaPolicy(QuotaPolicy):
     """Politique de quota fixe : chaque utilisateur a un quota maximum.
@@ -63,7 +73,7 @@ class FixedQuotaPolicy(QuotaPolicy):
         return self._quota_bytes - used
 
     def record_upload(self, user_id: str, file_size_bytes: int) -> None:
-        """Enregistre l'utilisation d'espace (méthode helper pour les tests)."""
+        """Enregistre l'utilisation d'espace après un upload réussi."""
         current = self._used_space.get(user_id, 0)
         self._used_space[user_id] = current + file_size_bytes
 
@@ -82,3 +92,7 @@ class UnlimitedQuotaPolicy(QuotaPolicy):
     def get_remaining_quota(self, user_id: str) -> int:
         """Retourne -1 pour indiquer un quota illimité."""
         return -1
+
+    def record_upload(self, user_id: str, file_size_bytes: int) -> None:
+        """Aucun décompte nécessaire : le quota est illimité."""
+        pass

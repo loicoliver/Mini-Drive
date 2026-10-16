@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pytest
 
+from minidrive.application.quota_policies import FixedQuotaPolicy
 from minidrive.bootstrap import Container, create_container
+from minidrive.domain.errors import QuotaExceededError
 
 
 class TestBootstrap:
@@ -32,6 +34,26 @@ class TestBootstrap:
         folders = container.list_folders.execute()
 
         assert [folder.name.value for folder in folders] == ["test-folder"]
+
+    def test_container_provides_upload_file(self, tmp_path: Path) -> None:
+        """Le conteneur doit fournir UploadFile, blobs sous le dossier du .db."""
+        container = create_container(db_path=tmp_path / "test.db")
+
+        file = container.upload_file.execute(name="a.txt", data=b"hello")
+
+        assert file.name.value == "a.txt"
+        assert file.size.value == 5
+        assert (tmp_path / "blobs" / file.id).read_bytes() == b"hello"
+
+    def test_container_accepts_quota_policy(self, tmp_path: Path) -> None:
+        """Le conteneur doit accepter une politique de quota (Strategy interchangeable)."""
+        container = create_container(
+            db_path=tmp_path / "test.db", quota_policy=FixedQuotaPolicy(quota_bytes=4)
+        )
+
+        container.upload_file.execute(name="ok.txt", data=b"1234")
+        with pytest.raises(QuotaExceededError):
+            container.upload_file.execute(name="ko.txt", data=b"12345")
 
     def test_create_folder_is_wired_correctly(self, tmp_path: Path) -> None:
         """Le use case CreateFolder doit être câblé avec les dépendances."""

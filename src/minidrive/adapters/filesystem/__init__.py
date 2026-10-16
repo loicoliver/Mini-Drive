@@ -1,1 +1,1 @@
-"""Adapteurs filesystem : implémentations basées sur le système de fichiers (à venir)."""
+"""Adapteurs filesystem : stockage de fichiers sur disque (pathlib, cross-platform)."""

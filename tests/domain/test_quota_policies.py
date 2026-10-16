@@ -61,6 +61,14 @@ class TestUnlimitedQuotaPolicy:
         assert policy.get_remaining_quota("user1") == -1
         assert policy.get_remaining_quota("user2") == -1
 
+    def test_record_upload_is_noop(self) -> None:
+        """record_upload ne change rien (quota illimité)."""
+        policy = UnlimitedQuotaPolicy()
+        policy.record_upload("user1", 1000000)
+
+        assert policy.can_upload("user1", 1000000) is True
+        assert policy.get_remaining_quota("user1") == -1
+
 
 class TestQuotaPolicyStrategy:
     """Tests du pattern Strategy : interchangeabilité des politiques."""
@@ -79,8 +87,10 @@ class TestQuotaPolicyStrategy:
             # Toutes doivent avoir ces méthodes
             assert hasattr(policy, "can_upload")
             assert hasattr(policy, "get_remaining_quota")
+            assert hasattr(policy, "record_upload")
             assert callable(policy.can_upload)
             assert callable(policy.get_remaining_quota)
+            assert callable(policy.record_upload)
 
     def test_policies_are_interchangeable(self) -> None:
         """On peut remplacer une politique par une autre (principe L : Liskov)."""

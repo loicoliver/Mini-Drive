@@ -5,11 +5,9 @@ aucune dépendance externe. Une connexion courte est ouverte puis fermée
 par opération (pas de handle persistant, pas de verrou résiduel sur Windows).
 """
 
-import sqlite3
-from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
 
+from minidrive.adapters.sqlite._database import connect
 from minidrive.application.ports import FolderRepository
 from minidrive.domain.entities import Folder
 from minidrive.domain.value_objects import FileName
@@ -45,23 +43,12 @@ class SqliteFolderRepository(FolderRepository):
             db_path: Chemin du fichier .db (dossiers parents créés si besoin)
         """
         self._db_path = Path(db_path)
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connection() as connection:
+        with connect(self._db_path) as connection:
             connection.executescript(_SCHEMA)
-
-    @contextmanager
-    def _connection(self) -> Iterator[sqlite3.Connection]:
-        """Ouvre une connexion courte (transaction + fermeture garanties)."""
-        connection = sqlite3.connect(str(self._db_path))
-        try:
-            with connection:
-                yield connection
-        finally:
-            connection.close()
 
     def add(self, folder: Folder) -> None:
         """Ajoute un dossier au repository."""
-        with self._connection() as connection:
+        with connect(self._db_path) as connection:
             connection.execute(
                 "INSERT INTO folders (id, name, parent_id) VALUES (?, ?, ?)",
                 (folder.id, folder.name.value, folder.parent_id),
@@ -69,7 +56,7 @@ class SqliteFolderRepository(FolderRepository):
 
     def get(self, folder_id: str) -> Folder | None:
         """Récupère un dossier par son identifiant."""
-        with self._connection() as connection:
+        with connect(self._db_path) as connection:
             row = connection.execute(
                 "SELECT id, name, parent_id FROM folders WHERE id = ?",
                 (folder_id,),
@@ -83,7 +70,7 @@ class SqliteFolderRepository(FolderRepository):
 
     def exists_with_name(self, name: str, parent_id: str | None) -> bool:
         """Vérifie si un dossier avec ce nom existe déjà dans le même parent."""
-        with self._connection() as connection:
+        with connect(self._db_path) as connection:
             row = connection.execute(
                 "SELECT 1 FROM folders WHERE name = ? AND parent_id IS ? LIMIT 1",
                 (name, parent_id),
@@ -92,7 +79,7 @@ class SqliteFolderRepository(FolderRepository):
 
     def list_all(self) -> list[Folder]:
         """Liste tous les dossiers, triés par nom."""
-        with self._connection() as connection:
+        with connect(self._db_path) as connection:
             rows = connection.execute(
                 "SELECT id, name, parent_id FROM folders ORDER BY name"
             ).fetchall()
