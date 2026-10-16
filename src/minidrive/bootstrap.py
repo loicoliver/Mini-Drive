@@ -11,6 +11,7 @@ from minidrive.adapters.filesystem.blob_storage import FilesystemBlobStorage
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
 from minidrive.adapters.sqlite.file_repository import SqliteFileRepository
 from minidrive.adapters.sqlite.folder_repository import SqliteFolderRepository
+from minidrive.application.ports import FileRepository, FolderRepository
 from minidrive.application.quota_policies import QuotaPolicy, UnlimitedQuotaPolicy
 from minidrive.application.use_cases.create_folder import CreateFolder
 from minidrive.application.use_cases.download_file import DownloadFile
@@ -18,8 +19,12 @@ from minidrive.application.use_cases.list_files import ListFiles
 from minidrive.application.use_cases.list_folders import ListFolders
 from minidrive.application.use_cases.move_file import MoveFile
 from minidrive.application.use_cases.move_folder import MoveFolder
+from minidrive.application.use_cases.purge_file import PurgeFile
+from minidrive.application.use_cases.purge_folder import PurgeFolder
 from minidrive.application.use_cases.rename_file import RenameFile
 from minidrive.application.use_cases.rename_folder import RenameFolder
+from minidrive.application.use_cases.trash_file import RestoreFile, TrashFile
+from minidrive.application.use_cases.trash_folder import RestoreFolder, TrashFolder
 from minidrive.application.use_cases.upload_file import UploadFile
 
 DEFAULT_DB_PATH = Path.home() / ".minidrive" / "minidrive.db"
@@ -93,11 +98,44 @@ class Container:
             file_repository=self._file_repository,
             folder_repository=self._folder_repository,
         )
+        self._trash_folder_use_case = TrashFolder(
+            folder_repository=self._folder_repository,
+        )
+        self._restore_folder_use_case = RestoreFolder(
+            folder_repository=self._folder_repository,
+        )
+        self._trash_file_use_case = TrashFile(
+            file_repository=self._file_repository,
+        )
+        self._restore_file_use_case = RestoreFile(
+            file_repository=self._file_repository,
+        )
+        self._purge_folder_use_case = PurgeFolder(
+            folder_repository=self._folder_repository,
+            file_repository=self._file_repository,
+            blob_storage=self._blob_storage,
+            quota_policy=self._quota_policy,
+        )
+        self._purge_file_use_case = PurgeFile(
+            file_repository=self._file_repository,
+            blob_storage=self._blob_storage,
+            quota_policy=self._quota_policy,
+        )
 
     @property
     def db_path(self) -> Path:
         """Chemin du fichier SQLite utilisé."""
         return self._db_path
+
+    @property
+    def folder_repository(self) -> FolderRepository:
+        """Accès au repository dossiers (get inclut la corbeille)."""
+        return self._folder_repository
+
+    @property
+    def file_repository(self) -> FileRepository:
+        """Accès au repository fichiers (get inclut la corbeille)."""
+        return self._file_repository
 
     @property
     def create_folder(self) -> CreateFolder:
@@ -143,6 +181,36 @@ class Container:
     def move_file(self) -> MoveFile:
         """Accès au use case MoveFile."""
         return self._move_file_use_case
+
+    @property
+    def trash_folder(self) -> TrashFolder:
+        """Accès au use case TrashFolder."""
+        return self._trash_folder_use_case
+
+    @property
+    def restore_folder(self) -> RestoreFolder:
+        """Accès au use case RestoreFolder."""
+        return self._restore_folder_use_case
+
+    @property
+    def trash_file(self) -> TrashFile:
+        """Accès au use case TrashFile."""
+        return self._trash_file_use_case
+
+    @property
+    def restore_file(self) -> RestoreFile:
+        """Accès au use case RestoreFile."""
+        return self._restore_file_use_case
+
+    @property
+    def purge_folder(self) -> PurgeFolder:
+        """Accès au use case PurgeFolder."""
+        return self._purge_folder_use_case
+
+    @property
+    def purge_file(self) -> PurgeFile:
+        """Accès au use case PurgeFile."""
+        return self._purge_file_use_case
 
 
 def create_container(

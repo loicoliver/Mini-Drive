@@ -1,9 +1,11 @@
 """Use case pour déplacer un dossier (pattern Use Case / Command)."""
 
+from minidrive.application.folder_tree import descendant_ids
 from minidrive.application.ports import FolderRepository
 from minidrive.domain.entities import Folder
 from minidrive.domain.errors import (
     FolderAlreadyExistsError,
+    InTrashError,
     InvalidMoveError,
     UnknownFolderError,
 )
@@ -38,6 +40,8 @@ class MoveFolder:
         folder = self._folder_repository.get(folder_id)
         if folder is None:
             raise UnknownFolderError(folder_id)
+        if folder.trashed:
+            raise InTrashError(folder_id)
 
         if new_parent_id == folder.parent_id:
             return folder  # no-op : déjà à cet endroit
@@ -49,7 +53,10 @@ class MoveFolder:
             parent = self._folder_repository.get(new_parent_id)
             if parent is None:
                 raise UnknownFolderError(new_parent_id)
-            if new_parent_id in self._descendant_ids(folder_id):
+            if parent.trashed:
+                raise InvalidMoveError(new_parent_id, "destination dans la corbeille")
+            descendants = descendant_ids(self._folder_repository.list_all(), folder_id)
+            if new_parent_id in descendants:
                 raise InvalidMoveError(
                     folder_id, "un dossier ne peut pas aller dans un de ses descendants"
                 )
@@ -60,18 +67,3 @@ class MoveFolder:
         folder.parent_id = new_parent_id
         self._folder_repository.save(folder)
         return folder
-
-    def _descendant_ids(self, folder_id: str) -> set[str]:
-        """Retourne tous les descendants d'un dossier (parcours en mémoire)."""
-        children: dict[str | None, list[str]] = {}
-        for candidate in self._folder_repository.list_all():
-            children.setdefault(candidate.parent_id, []).append(candidate.id)
-
-        descendants: set[str] = set()
-        stack = [folder_id]
-        while stack:
-            for child_id in children.get(stack.pop(), []):
-                if child_id not in descendants:
-                    descendants.add(child_id)
-                    stack.append(child_id)
-        return descendants

@@ -8,7 +8,7 @@ from minidrive.adapters.memory.id_generator import UuidIdGenerator
 from minidrive.application.quota_policies import UnlimitedQuotaPolicy
 from minidrive.application.use_cases.download_file import DownloadFile
 from minidrive.application.use_cases.upload_file import UploadFile
-from minidrive.domain.errors import UnknownFileError
+from minidrive.domain.errors import InTrashError, UnknownFileError
 
 
 def make_download_file() -> tuple[DownloadFile, UploadFile]:
@@ -48,6 +48,15 @@ class TestDownloadFile:
             download_file.execute(file_id="inexistant")
 
         assert "inexistant" in str(exc_info.value)
+
+    def test_download_trashed_refused(self) -> None:
+        """Télécharger un fichier corbeillé doit lever InTrashError."""
+        download_file, upload_file = make_download_file()
+        uploaded = upload_file.execute(name="vieux.txt", data=b"x")
+        uploaded.trashed = True
+
+        with pytest.raises(InTrashError):
+            download_file.execute(file_id=uploaded.id)
 
     def test_download_missing_blob(self) -> None:
         """Métadonnées sans contenu doivent lever UnknownFileError (incohérence)."""

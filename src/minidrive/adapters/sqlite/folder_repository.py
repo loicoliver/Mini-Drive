@@ -7,7 +7,7 @@ par opération (pas de handle persistant, pas de verrou résiduel sur Windows).
 
 from pathlib import Path
 
-from minidrive.adapters.sqlite._database import connect
+from minidrive.adapters.sqlite._database import connect, ensure_column
 from minidrive.application.ports import FolderRepository
 from minidrive.domain.entities import Folder
 from minidrive.domain.value_objects import FileName
@@ -16,7 +16,8 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS folders (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    parent_id TEXT
+    parent_id TEXT,
+    trashed INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_folders_name_parent
     ON folders (name, parent_id);
@@ -45,20 +46,22 @@ class SqliteFolderRepository(FolderRepository):
         self._db_path = Path(db_path)
         with connect(self._db_path) as connection:
             connection.executescript(_SCHEMA)
+        # Migration des .db créés avant la corbeille (colonne absente)
+        ensure_column(self._db_path, "folders", "trashed", "INTEGER NOT NULL DEFAULT 0")
 
     def add(self, folder: Folder) -> None:
         """Ajoute un dossier au repository."""
         with connect(self._db_path) as connection:
             connection.execute(
-                "INSERT INTO folders (id, name, parent_id) VALUES (?, ?, ?)",
-                (folder.id, folder.name.value, folder.parent_id),
+                "INSERT INTO folders (id, name, parent_id, trashed) VALUES (?, ?, ?, ?)",
+                (folder.id, folder.name.value, folder.parent_id, int(folder.trashed)),
             )
 
     def get(self, folder_id: str) -> Folder | None:
-        """Récupère un dossier par son identifiant."""
+        """Récupère un dossier par son identifiant (corbeille incluse)."""
         with connect(self._db_path) as connection:
             row = connection.execute(
-                "SELECT id, name, parent_id FROM folders WHERE id = ?",
+                "SELECT id, name, parent_id, trashed FROM folders WHERE id = ?",
                 (folder_id,),
             ).fetchone()
         if row is None:
@@ -66,30 +69,41 @@ class SqliteFolderRepository(FolderRepository):
         found_id: str = row[0]
         found_name: str = row[1]
         found_parent_id: str | None = row[2]
-        return Folder.create(id=found_id, name=FileName(found_name), parent_id=found_parent_id)
+        found_trashed: bool = bool(row[3])
+        return Folder.create(
+            id=found_id, name=FileName(found_name), parent_id=found_parent_id, trashed=found_trashed
+        )
 
     def exists_with_name(self, name: str, parent_id: str | None) -> bool:
-        """Vérifie si un dossier avec ce nom existe déjà dans le même parent."""
+        """Vérifie si un dossier NON corbeillé avec ce nom existe dans le parent."""
         with connect(self._db_path) as connection:
             row = connection.execute(
-                "SELECT 1 FROM folders WHERE name = ? AND parent_id IS ? LIMIT 1",
+                "SELECT 1 FROM folders WHERE name = ? AND parent_id IS ? AND trashed = 0 LIMIT 1",
                 (name, parent_id),
             ).fetchone()
         return row is not None
 
-    def list_all(self) -> list[Folder]:
-        """Liste tous les dossiers, triés par nom."""
+    def list_all(self, include_trashed: bool = False) -> list[Folder]:
+        """Liste les dossiers NON corbeillés, triés par nom."""
+        query = "SELECT id, name, parent_id, trashed FROM folders"
+        if not include_trashed:
+            query += " WHERE trashed = 0"
+        query += " ORDER BY name"
         with connect(self._db_path) as connection:
-            rows = connection.execute(
-                "SELECT id, name, parent_id FROM folders ORDER BY name"
-            ).fetchall()
+            rows = connection.execute(query).fetchall()
         folders: list[Folder] = []
         for row in rows:
             folder_id: str = row[0]
             folder_name: str = row[1]
             folder_parent_id: str | None = row[2]
+            folder_trashed: bool = bool(row[3])
             folders.append(
-                Folder.create(id=folder_id, name=FileName(folder_name), parent_id=folder_parent_id)
+                Folder.create(
+                    id=folder_id,
+                    name=FileName(folder_name),
+                    parent_id=folder_parent_id,
+                    trashed=folder_trashed,
+                )
             )
         return folders
 
@@ -97,6 +111,11 @@ class SqliteFolderRepository(FolderRepository):
         """Crée ou remplace un dossier (upsert par identifiant)."""
         with connect(self._db_path) as connection:
             connection.execute(
-                "INSERT OR REPLACE INTO folders (id, name, parent_id) VALUES (?, ?, ?)",
-                (folder.id, folder.name.value, folder.parent_id),
+                "INSERT OR REPLACE INTO folders (id, name, parent_id, trashed) VALUES (?, ?, ?, ?)",
+                (folder.id, folder.name.value, folder.parent_id, int(folder.trashed)),
             )
+
+    def delete(self, folder_id: str) -> None:
+        """Supprime définitivement un dossier (aucune erreur si absent)."""
+        with connect(self._db_path) as connection:
+            connection.execute("DELETE FROM folders WHERE id = ?", (folder_id,))

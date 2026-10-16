@@ -73,6 +73,11 @@ minidrive rename <id> nouveau-nom
 
 # Déplacer (vers un dossier, ou la racine sans --vers)
 minidrive move <id> --vers <dossier-id>
+
+# Corbeille / restauration / suppression définitive
+minidrive trash <id>
+minidrive restore <id>
+minidrive rm <id>
 ```
 
 ### Tests et qualité
@@ -118,13 +123,14 @@ pytest --cov=minidrive --cov-fail-under=85
 - ✅ Télécharger un fichier (`minidrive download <id> [--vers <chemin>]`)
 - ✅ Renommer (`minidrive rename <id> <nom>`, dossiers et fichiers)
 - ✅ Déplacer (`minidrive move <id> [--vers <dossier-id>]`, garde anti-cycle)
+- ✅ Corbeille (`trash` / `restore`, cascade, reversible)
+- ✅ Suppression définitive (`rm`, récursive, blobs + quota libérés)
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
 - ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)
 - ✅ Quotas branchés sur l'upload (mono-utilisateur `local`, `UnlimitedQuotaPolicy` par défaut)
 
 **Fonctionnalités prévues (MVP ultérieur)** :
-- Supprimer (avec corbeille)
 - Partager (lecteur/éditeur)
 - Gestion des quotas par utilisateur
 

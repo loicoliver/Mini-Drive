@@ -21,20 +21,27 @@ class InMemoryFolderRepository(FolderRepository):
         self._folders[folder.id] = folder
 
     def get(self, folder_id: str) -> Folder | None:
-        """Récupère un dossier par son identifiant."""
+        """Récupère un dossier par son identifiant (corbeille incluse)."""
         return self._folders.get(folder_id)
 
     def exists_with_name(self, name: str, parent_id: str | None) -> bool:
-        """Vérifie si un dossier avec ce nom existe déjà dans le même parent."""
+        """Vérifie si un dossier NON corbeillé avec ce nom existe dans le parent."""
         return any(
-            folder.name.value == name and folder.parent_id == parent_id
+            folder.name.value == name and folder.parent_id == parent_id and not folder.trashed
             for folder in self._folders.values()
         )
 
-    def list_all(self) -> list[Folder]:
-        """Liste tous les dossiers, triés par nom."""
-        return sorted(self._folders.values(), key=lambda folder: folder.name.value)
+    def list_all(self, include_trashed: bool = False) -> list[Folder]:
+        """Liste les dossiers NON corbeillés, triés par nom."""
+        folders = list(self._folders.values())
+        if not include_trashed:
+            folders = [folder for folder in folders if not folder.trashed]
+        return sorted(folders, key=lambda folder: folder.name.value)
 
     def save(self, folder: Folder) -> None:
         """Crée ou remplace un dossier (upsert par identifiant)."""
         self._folders[folder.id] = folder
+
+    def delete(self, folder_id: str) -> None:
+        """Supprime définitivement un dossier (aucune erreur si absent)."""
+        self._folders.pop(folder_id, None)

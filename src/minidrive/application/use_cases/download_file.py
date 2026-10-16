@@ -2,7 +2,7 @@
 
 from minidrive.application.ports import BlobStorage, FileRepository
 from minidrive.domain.entities import File
-from minidrive.domain.errors import UnknownFileError
+from minidrive.domain.errors import InTrashError, UnknownFileError
 
 
 class DownloadFile:
@@ -42,6 +42,8 @@ class DownloadFile:
         file = self._file_repository.get(file_id)
         if file is None:
             raise UnknownFileError(file_id)
+        if file.trashed:
+            raise InTrashError(file_id)
 
         data = self._blob_storage.read(file_id)
         if data is None:

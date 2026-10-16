@@ -106,6 +106,37 @@ class FolderRepositoryContract(ABC):
 
         assert repository.get("9") is not None
 
+    def test_trashed_folder_hidden_but_retrievable(self, repository: FolderRepository) -> None:
+        """Un dossier corbeillé : exclu de list/exists, mais get le retourne."""
+        repository.add(Folder.create(id="1", name=FileName("vieux"), trashed=True))
+
+        retrieved = repository.get("1")
+        assert retrieved is not None
+        assert retrieved.trashed is True
+        assert repository.list_all() == []
+        assert repository.exists_with_name("vieux", None) is False
+
+    def test_delete_removes_folder(self, repository: FolderRepository) -> None:
+        """delete doit supprimer définitivement, sans erreur si absent."""
+        repository.add(Folder.create(id="1", name=FileName("ephemere")))
+
+        repository.delete("1")
+        repository.delete("inexistant")  # no-op
+
+        assert repository.get("1") is None
+        assert repository.list_all() == []
+
+    def test_list_all_include_trashed(self, repository: FolderRepository) -> None:
+        """list_all(include_trashed=True) doit tout retourner (traversées internes)."""
+        repository.add(Folder.create(id="1", name=FileName("visible")))
+        repository.add(Folder.create(id="2", name=FileName("cache"), trashed=True))
+
+        assert [folder.name.value for folder in repository.list_all()] == ["visible"]
+        all_names = sorted(
+            folder.name.value for folder in repository.list_all(include_trashed=True)
+        )
+        assert all_names == ["cache", "visible"]
+
     def test_list_all_returns_empty_when_no_folder(self, repository: FolderRepository) -> None:
         """list_all sur un repository vide doit retourner une liste vide."""
         assert repository.list_all() == []

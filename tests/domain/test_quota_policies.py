@@ -45,6 +45,23 @@ class TestFixedQuotaPolicy:
         assert policy.get_remaining_quota("user1") == 400
         assert policy.get_remaining_quota("user2") == 800
 
+    def test_record_removal_frees_quota(self) -> None:
+        """Supprimer un fichier doit libérer son espace."""
+        policy = FixedQuotaPolicy(quota_bytes=1000)
+        policy.record_upload("user1", 800)
+
+        policy.record_removal("user1", 300)
+
+        assert policy.get_remaining_quota("user1") == 500
+
+    def test_record_removal_floors_at_zero(self) -> None:
+        """La libération ne doit jamais rendre le quota négatif en usage."""
+        policy = FixedQuotaPolicy(quota_bytes=1000)
+
+        policy.record_removal("user1", 500)
+
+        assert policy.get_remaining_quota("user1") == 1000
+
 
 class TestUnlimitedQuotaPolicy:
     """Tests de la politique de quota illimité."""

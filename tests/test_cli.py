@@ -294,6 +294,51 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "déplacé vers" in captured.out
 
+    def test_trash_restore_cycle(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """trash cache le dossier de ls ; restore le fait réapparaître."""
+        main(["mkdir", "ephemere"])
+        capsys.readouterr()
+        main(["ls"])
+        folder_id = capsys.readouterr().out.split("ID: ")[1].split(")")[0]
+        capsys.readouterr()
+
+        main(["trash", folder_id])
+        assert "corbeille" in capsys.readouterr().out
+
+        main(["ls"])
+        assert "Drive vide." in capsys.readouterr().out
+
+        main(["restore", folder_id])
+        assert "restauré" in capsys.readouterr().out
+
+        main(["ls"])
+        assert "ephemere" in capsys.readouterr().out
+
+    def test_rm_purges_definitively(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """rm doit supprimer définitivement (inconnu ensuite)."""
+        main(["mkdir", "fini"])
+        capsys.readouterr()
+        main(["ls"])
+        folder_id = capsys.readouterr().out.split("ID: ")[1].split(")")[0]
+        capsys.readouterr()
+
+        main(["rm", folder_id])
+        assert "supprimé définitivement" in capsys.readouterr().out
+
+        with pytest.raises(SystemExit) as exc_info:
+            main(["rm", folder_id])
+        assert exc_info.value.code == 1
+
+    def test_trash_unknown_id(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """trash d'un ID inconnu doit afficher une erreur et sortir en code 1."""
+        with pytest.raises(SystemExit) as exc_info:
+            main(["trash", "inconnu"])
+
+        assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "ID inconnu" in captured.out
+
     def test_help_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
         """-h / --help doit afficher l'aide et sortir en code 0."""
         with pytest.raises(SystemExit) as exc_info:

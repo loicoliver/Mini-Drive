@@ -35,3 +35,7 @@ class FilesystemBlobStorage(BlobStorage):
         if not blob_path.is_file():
             return None
         return blob_path.read_bytes()
+
+    def delete(self, file_id: str) -> None:
+        """Supprime le contenu d'un fichier (aucune erreur si absent)."""
+        self._blob_path(file_id).unlink(missing_ok=True)

@@ -17,3 +17,7 @@ class InMemoryBlobStorage(BlobStorage):
     def read(self, file_id: str) -> bytes | None:
         """Lit le contenu d'un fichier, ou None si absent."""
         return self._blobs.get(file_id)
+
+    def delete(self, file_id: str) -> None:
+        """Supprime le contenu d'un fichier (aucune erreur si absent)."""
+        self._blobs.pop(file_id, None)

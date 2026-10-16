@@ -22,3 +22,18 @@ def connect(db_path: Path | str) -> Iterator[sqlite3.Connection]:
             yield connection
     finally:
         connection.close()
+
+
+def ensure_column(db_path: Path | str, table: str, column: str, definition: str) -> None:
+    """Ajoute une colonne si absente (migration idempotente des .db existants).
+
+    Args:
+        db_path: Chemin du fichier SQLite
+        table: Table à migrer (constante interne, jamais saisie utilisateur)
+        column: Colonne à ajouter si absente
+        definition: Définition SQL de la colonne (ex: "INTEGER NOT NULL DEFAULT 0")
+    """
+    with connect(db_path) as connection:
+        existing = [row[1] for row in connection.execute(f"PRAGMA table_info({table})").fetchall()]
+        if column not in existing:
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")

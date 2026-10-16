@@ -53,6 +53,15 @@ class BlobStorageContract(ABC):
         assert storage.read("a") == b"contenu-a"
         assert storage.read("b") == b"contenu-b"
 
+    def test_delete_removes_blob(self, storage: BlobStorage) -> None:
+        """delete doit supprimer le contenu, sans erreur si absent."""
+        storage.write("x", b"data")
+
+        storage.delete("x")
+        storage.delete("inexistant")  # no-op
+
+        assert storage.read("x") is None
+
 
 class TestInMemoryBlobStorage(BlobStorageContract):
     """Tests concrets pour InMemoryBlobStorage."""

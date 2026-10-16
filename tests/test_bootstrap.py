@@ -80,6 +80,23 @@ class TestBootstrap:
         assert container.rename_file is not None
         assert container.move_folder is not None
 
+    def test_container_provides_trash_and_purge(self, tmp_path: Path) -> None:
+        """Le conteneur doit fournir trash/restore/purge de bout en bout."""
+        container = create_container(db_path=tmp_path / "test.db")
+        folder = container.create_folder.execute("dossier")
+
+        container.trash_folder.execute(folder_id=folder.id)
+        assert container.list_folders.execute() == []
+
+        container.restore_folder.execute(folder_id=folder.id)
+        assert len(container.list_folders.execute()) == 1
+
+        container.purge_folder.execute(folder_id=folder.id)
+        assert container.list_folders.execute() == []
+        assert container.trash_file is not None
+        assert container.restore_file is not None
+        assert container.purge_file is not None
+
     def test_create_folder_is_wired_correctly(self, tmp_path: Path) -> None:
         """Le use case CreateFolder doit être câblé avec les dépendances."""
         container = create_container(db_path=tmp_path / "test.db")

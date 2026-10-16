@@ -66,6 +66,14 @@ class UnknownFolderError(DomainError):
         super().__init__(f"Dossier inconnu : '{folder_id}'")
 
 
+class InTrashError(DomainError):
+    """Opération impossible : l'élément est dans la corbeille (restaurer d'abord)."""
+
+    def __init__(self, node_id: str) -> None:
+        self.node_id = node_id
+        super().__init__(f"Opération impossible : '{node_id}' est dans la corbeille")
+
+
 class InvalidMoveError(DomainError):
     """Déplacement impossible (sur soi-même ou dans un descendant)."""
 

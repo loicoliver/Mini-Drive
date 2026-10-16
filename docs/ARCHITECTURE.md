@@ -74,6 +74,8 @@ Ce document explique comment les **principes SOLID** et les **design patterns** 
 | **Use Case / Command** | `src/minidrive/application/use_cases/download_file.py` → `DownloadFile` | Miroir : métadonnées + contenu retournés, écriture disque côté CLI. |
 | **Use Case / Command** | `src/minidrive/application/use_cases/rename_folder.py` → `RenameFolder` | Même moule : get → valider → doublon → save (upsert). |
 | **Use Case / Command** | `src/minidrive/application/use_cases/move_folder.py` → `MoveFolder` | Plus garde anti-cycle par parcours mémoire (aucun nouveau port requis). |
+| **Use Case / Command** | `src/minidrive/application/use_cases/trash_folder.py` → `TrashFolder` | Soft-delete en cascade (flag `trashed`, migration de schéma idempotente). |
+| **Use Case / Command** | `src/minidrive/application/use_cases/purge_folder.py` → `PurgeFolder` | Suppression récursive : lignes + blobs + quota libéré. |
 | **Factory** | `src/minidrive/domain/entities.py` → `Folder.create()` | Centraliser la création valide d'entités. Garantit qu'un dossier est toujours créé dans un état valide. |
 | **Factory** | `src/minidrive/application/ports.py` → `IdGenerator` | Abstraire la génération d'identifiants. Permet de changer d'algorithme (UUID, Snowflake, etc.) sans impact. |
 | **Strategy** | `src/minidrive/application/quota_policies.py` → `QuotaPolicy` | Encapsuler des algorithmes interchangeables. Permet d'ajouter de nouvelles règles de quota sans modifier le code existant. |
@@ -196,6 +198,10 @@ class PremiumQuotaPolicy(QuotaPolicy):
     def record_upload(self, user_id: str, file_size_bytes: int) -> None:
         # Décompter ici (ex: self._used_space[user_id] += file_size_bytes)
         ...
+
+    def record_removal(self, user_id: str, file_size_bytes: int) -> None:
+        # Libérer ici (ex: self._used_space[user_id] -= file_size_bytes)
+        ...
 ```
 
 2. Aucune modification dans `FixedQuotaPolicy`, `UnlimitedQuotaPolicy` ou les use cases.
@@ -233,8 +239,7 @@ La recette éprouvée (upload de fichier) pour ajouter une fonctionnalité :
 5. **Bootstrap** : câbler les dépendances
 6. **Interface** : ajouter la commande (ex: `minidrive upload <fichier>`)
 
-Prochaine fonctionnalité candidate : corbeille + purge
-(use cases `TrashNode`, `RestoreNode`, `DeleteNode` : soft-delete via colonne
-`trashed_at`, suppression définitive + blob, décompte quota inversé).
+Prochaine fonctionnalité candidate : partage et vrais utilisateurs
+(`owner_id` sur les entités, permissions lecteur/éditeur, quota par utilisateur).
 
 L'architecture reste stable, on ajoute sans modifier.

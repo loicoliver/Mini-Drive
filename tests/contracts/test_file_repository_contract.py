@@ -85,6 +85,39 @@ class FileRepositoryContract(ABC):
 
         assert repository.get("9") is not None
 
+    def test_trashed_file_hidden_but_retrievable(self, repository: FileRepository) -> None:
+        """Un fichier corbeillé : exclu de list/exists, mais get le retourne."""
+        trashed = make_file(file_id="1", name="vieux.txt")
+        trashed.trashed = True
+        repository.add(trashed)
+
+        retrieved = repository.get("1")
+        assert retrieved is not None
+        assert retrieved.trashed is True
+        assert repository.list_all() == []
+        assert repository.exists_with_name("vieux.txt", None) is False
+
+    def test_delete_removes_file(self, repository: FileRepository) -> None:
+        """delete doit supprimer définitivement, sans erreur si absent."""
+        repository.add(make_file(file_id="1", name="ephemere.txt"))
+
+        repository.delete("1")
+        repository.delete("inexistant")  # no-op
+
+        assert repository.get("1") is None
+        assert repository.list_all() == []
+
+    def test_list_all_include_trashed(self, repository: FileRepository) -> None:
+        """list_all(include_trashed=True) doit tout retourner (traversées internes)."""
+        repository.add(make_file(file_id="1", name="visible.txt"))
+        trashed = make_file(file_id="2", name="cache.txt")
+        trashed.trashed = True
+        repository.add(trashed)
+
+        assert [file.name.value for file in repository.list_all()] == ["visible.txt"]
+        all_names = sorted(file.name.value for file in repository.list_all(include_trashed=True))
+        assert all_names == ["cache.txt", "visible.txt"]
+
 
 class TestInMemoryFileRepository(FileRepositoryContract):
     """Tests concrets pour InMemoryFileRepository."""

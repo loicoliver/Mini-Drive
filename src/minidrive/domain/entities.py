@@ -12,20 +12,24 @@ class Folder:
     id: str
     name: FileName
     parent_id: str | None
+    trashed: bool = False
 
     @staticmethod
-    def create(id: str, name: FileName, parent_id: str | None = None) -> "Folder":
+    def create(
+        id: str, name: FileName, parent_id: str | None = None, trashed: bool = False
+    ) -> "Folder":
         """Factory method pour créer un dossier valide.
 
         Args:
             id: Identifiant unique du dossier
             name: Nom validé du dossier
             parent_id: Identifiant du dossier parent (None pour la racine)
+            trashed: True si le dossier est dans la corbeille
 
         Returns:
             Une nouvelle instance de Folder
         """
-        return Folder(id=id, name=name, parent_id=parent_id)
+        return Folder(id=id, name=name, parent_id=parent_id, trashed=trashed)
 
 
 @dataclass
@@ -36,9 +40,16 @@ class File:
     name: FileName
     parent_id: str | None
     size: FileSize
+    trashed: bool = False
 
     @staticmethod
-    def create(id: str, name: FileName, size: FileSize, parent_id: str | None = None) -> "File":
+    def create(
+        id: str,
+        name: FileName,
+        size: FileSize,
+        parent_id: str | None = None,
+        trashed: bool = False,
+    ) -> "File":
         """Factory method pour créer un fichier valide.
 
         Args:
@@ -46,8 +57,9 @@ class File:
             name: Nom validé du fichier
             size: Taille validée du fichier
             parent_id: Identifiant du dossier parent (None pour la racine)
+            trashed: True si le fichier est dans la corbeille
 
         Returns:
             Une nouvelle instance de File
         """
-        return File(id=id, name=name, parent_id=parent_id, size=size)
+        return File(id=id, name=name, parent_id=parent_id, size=size, trashed=trashed)

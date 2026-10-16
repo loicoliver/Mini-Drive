@@ -45,6 +45,16 @@ class QuotaPolicy(ABC):
         """
         pass
 
+    @abstractmethod
+    def record_removal(self, user_id: str, file_size_bytes: int) -> None:
+        """Libère du quota après suppression définitive d'un fichier.
+
+        Args:
+            user_id: Identifiant de l'utilisateur
+            file_size_bytes: Taille du fichier supprimé en octets
+        """
+        pass
+
 
 class FixedQuotaPolicy(QuotaPolicy):
     """Politique de quota fixe : chaque utilisateur a un quota maximum.
@@ -77,6 +87,11 @@ class FixedQuotaPolicy(QuotaPolicy):
         current = self._used_space.get(user_id, 0)
         self._used_space[user_id] = current + file_size_bytes
 
+    def record_removal(self, user_id: str, file_size_bytes: int) -> None:
+        """Libère l'espace d'un fichier supprimé (plancher à zéro)."""
+        current = self._used_space.get(user_id, 0)
+        self._used_space[user_id] = max(0, current - file_size_bytes)
+
 
 class UnlimitedQuotaPolicy(QuotaPolicy):
     """Politique de quota illimité : aucune restriction.
@@ -94,5 +109,9 @@ class UnlimitedQuotaPolicy(QuotaPolicy):
         return -1
 
     def record_upload(self, user_id: str, file_size_bytes: int) -> None:
+        """Aucun décompte nécessaire : le quota est illimité."""
+        pass
+
+    def record_removal(self, user_id: str, file_size_bytes: int) -> None:
         """Aucun décompte nécessaire : le quota est illimité."""
         pass

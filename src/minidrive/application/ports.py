@@ -43,11 +43,15 @@ class FolderRepository(ABC):
         pass
 
     @abstractmethod
-    def list_all(self) -> list[Folder]:
-        """Liste tous les dossiers, triés par nom.
+    def list_all(self, include_trashed: bool = False) -> list[Folder]:
+        """Liste les dossiers NON corbeillés, triés par nom.
+
+        Args:
+            include_trashed: True pour inclure aussi les corbeillés
+                (traversées trash/restore/purge, jamais l'affichage)
 
         Returns:
-            Tous les dossiers persistés, par nom croissant
+            Les dossiers persistés, par nom croissant
         """
         pass
 
@@ -57,6 +61,15 @@ class FolderRepository(ABC):
 
         Args:
             folder: Le dossier à persister (remplace celui de même ID)
+        """
+        pass
+
+    @abstractmethod
+    def delete(self, folder_id: str) -> None:
+        """Supprime définitivement un dossier (aucune erreur si absent).
+
+        Args:
+            folder_id: Identifiant unique du dossier
         """
         pass
 
@@ -112,11 +125,15 @@ class FileRepository(ABC):
         pass
 
     @abstractmethod
-    def list_all(self) -> list[File]:
-        """Liste tous les fichiers, triés par nom.
+    def list_all(self, include_trashed: bool = False) -> list[File]:
+        """Liste les fichiers NON corbeillés, triés par nom.
+
+        Args:
+            include_trashed: True pour inclure aussi les corbeillés
+                (traversées trash/restore/purge, jamais l'affichage)
 
         Returns:
-            Tous les fichiers persistés, par nom croissant
+            Les fichiers persistés, par nom croissant
         """
         pass
 
@@ -126,6 +143,15 @@ class FileRepository(ABC):
 
         Args:
             file: Le fichier à persister (remplace celui de même ID)
+        """
+        pass
+
+    @abstractmethod
+    def delete(self, file_id: str) -> None:
+        """Supprime définitivement un fichier (aucune erreur si absent).
+
+        Args:
+            file_id: Identifiant unique du fichier
         """
         pass
 
@@ -152,5 +178,14 @@ class BlobStorage(ABC):
 
         Returns:
             Le contenu binaire, ou None si absent
+        """
+        pass
+
+    @abstractmethod
+    def delete(self, file_id: str) -> None:
+        """Supprime le contenu d'un fichier (aucune erreur si absent).
+
+        Args:
+            file_id: Identifiant unique du fichier
         """
         pass

@@ -10,13 +10,15 @@ from minidrive.domain.errors import DomainError
 
 
 def _resolve_node_kind(container: Container, node_id: str) -> str:
-    """Détermine si un ID désigne un dossier ou un fichier (exit 1 si inconnu)."""
-    for folder in container.list_folders.execute():
-        if folder.id == node_id:
-            return "folder"
-    for file in container.list_files.execute():
-        if file.id == node_id:
-            return "file"
+    """Détermine si un ID désigne un dossier ou un fichier (exit 1 si inconnu).
+
+    Passe par get() (corbeille incluse), pas par ls (qui la masque) :
+    trash/restore/rm doivent résoudre les IDs corbeillés.
+    """
+    if container.folder_repository.get(node_id) is not None:
+        return "folder"
+    if container.file_repository.get(node_id) is not None:
+        return "file"
     print(f"✗ Erreur: ID inconnu '{node_id}'")
     sys.exit(1)
 
@@ -94,6 +96,27 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="ID du dossier de destination (défaut : racine)",
     )
+
+    trash_parser = subparsers.add_parser(
+        "trash",
+        help="Mettre à la corbeille",
+        description="Mettre un dossier (et son contenu) ou un fichier à la corbeille.",
+    )
+    trash_parser.add_argument("id", help="Identifiant du dossier ou fichier")
+
+    restore_parser = subparsers.add_parser(
+        "restore",
+        help="Restaurer depuis la corbeille",
+        description="Restaurer un dossier (et son contenu) ou un fichier corbeillé.",
+    )
+    restore_parser.add_argument("id", help="Identifiant du dossier ou fichier")
+
+    rm_parser = subparsers.add_parser(
+        "rm",
+        help="Supprimer définitivement",
+        description="Supprimer définitivement un dossier (récursif) ou un fichier.",
+    )
+    rm_parser.add_argument("id", help="Identifiant du dossier ou fichier")
     return parser
 
 
@@ -174,6 +197,29 @@ def main(argv: list[str] | None = None) -> None:
                 moved_file = container.move_file.execute(file_id=node_id, new_parent_id=new_parent)
                 where = f"vers '{new_parent}'" if new_parent is not None else "vers la racine"
                 print(f"✓ '{moved_file.name}' déplacé {where} (ID: {moved_file.id})")
+        elif args.command == "trash":
+            node_id = str(args.id)
+            if _resolve_node_kind(container, node_id) == "folder":
+                trashed_folder = container.trash_folder.execute(folder_id=node_id)
+                print(f"✓ '{trashed_folder.name}' mis à la corbeille (ID: {trashed_folder.id})")
+            else:
+                trashed_file = container.trash_file.execute(file_id=node_id)
+                print(f"✓ '{trashed_file.name}' mis à la corbeille (ID: {trashed_file.id})")
+        elif args.command == "restore":
+            node_id = str(args.id)
+            if _resolve_node_kind(container, node_id) == "folder":
+                restored_folder = container.restore_folder.execute(folder_id=node_id)
+                print(f"✓ '{restored_folder.name}' restauré (ID: {restored_folder.id})")
+            else:
+                restored_file = container.restore_file.execute(file_id=node_id)
+                print(f"✓ '{restored_file.name}' restauré (ID: {restored_file.id})")
+        elif args.command == "rm":
+            node_id = str(args.id)
+            if _resolve_node_kind(container, node_id) == "folder":
+                container.purge_folder.execute(folder_id=node_id)
+            else:
+                container.purge_file.execute(file_id=node_id)
+            print(f"✓ '{node_id}' supprimé définitivement")
         else:  # Sécurité : argparse rejette déjà les commandes inconnues (exit 2)
             print(f"Commande inconnue: {args.command}")
             sys.exit(1)

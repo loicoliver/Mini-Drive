@@ -2,7 +2,7 @@
 
 from minidrive.application.ports import FolderRepository
 from minidrive.domain.entities import Folder
-from minidrive.domain.errors import FolderAlreadyExistsError, UnknownFolderError
+from minidrive.domain.errors import FolderAlreadyExistsError, InTrashError, UnknownFolderError
 from minidrive.domain.value_objects import FileName
 
 
@@ -35,6 +35,8 @@ class RenameFolder:
         folder = self._folder_repository.get(folder_id)
         if folder is None:
             raise UnknownFolderError(folder_id)
+        if folder.trashed:
+            raise InTrashError(folder_id)
 
         if new_name == folder.name.value:
             return folder  # no-op : déjà ce nom

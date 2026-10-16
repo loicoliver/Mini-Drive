@@ -2,7 +2,7 @@
 
 from minidrive.application.ports import FileRepository
 from minidrive.domain.entities import File
-from minidrive.domain.errors import FileAlreadyExistsError, UnknownFileError
+from minidrive.domain.errors import FileAlreadyExistsError, InTrashError, UnknownFileError
 from minidrive.domain.value_objects import FileName
 
 
@@ -35,6 +35,8 @@ class RenameFile:
         file = self._file_repository.get(file_id)
         if file is None:
             raise UnknownFileError(file_id)
+        if file.trashed:
+            raise InTrashError(file_id)
 
         if new_name == file.name.value:
             return file  # no-op : déjà ce nom

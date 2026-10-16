@@ -4,6 +4,8 @@ from minidrive.application.ports import FileRepository, FolderRepository
 from minidrive.domain.entities import File
 from minidrive.domain.errors import (
     FileAlreadyExistsError,
+    InTrashError,
+    InvalidMoveError,
     UnknownFileError,
     UnknownFolderError,
 )
@@ -42,12 +44,18 @@ class MoveFile:
         file = self._file_repository.get(file_id)
         if file is None:
             raise UnknownFileError(file_id)
+        if file.trashed:
+            raise InTrashError(file_id)
 
         if new_parent_id == file.parent_id:
             return file  # no-op : déjà à cet endroit
 
-        if new_parent_id is not None and self._folder_repository.get(new_parent_id) is None:
-            raise UnknownFolderError(new_parent_id)
+        if new_parent_id is not None:
+            parent = self._folder_repository.get(new_parent_id)
+            if parent is None:
+                raise UnknownFolderError(new_parent_id)
+            if parent.trashed:
+                raise InvalidMoveError(new_parent_id, "destination dans la corbeille")
 
         if self._file_repository.exists_with_name(file.name.value, new_parent_id):
             raise FileAlreadyExistsError(file.name.value)

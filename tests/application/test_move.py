@@ -14,6 +14,7 @@ from minidrive.application.use_cases.upload_file import UploadFile
 from minidrive.domain.errors import (
     FileAlreadyExistsError,
     FolderAlreadyExistsError,
+    InTrashError,
     InvalidMoveError,
     UnknownFileError,
     UnknownFolderError,
@@ -137,6 +138,29 @@ class TestMoveFolder:
         folder = create_folder.execute("doublon")
 
         with pytest.raises(FolderAlreadyExistsError):
+            move_folder.execute(folder_id=folder.id, new_parent_id=parent.id)
+
+    def test_move_trashed_refused(
+        self, folder_setup: tuple[MoveFolder, CreateFolder, InMemoryFolderRepository]
+    ) -> None:
+        """Déplacer un dossier corbeillé doit lever InTrashError."""
+        move_folder, create_folder, _ = folder_setup
+        folder = create_folder.execute("vieux")
+        folder.trashed = True
+
+        with pytest.raises(InTrashError):
+            move_folder.execute(folder_id=folder.id, new_parent_id=None)
+
+    def test_move_into_trashed_parent_refused(
+        self, folder_setup: tuple[MoveFolder, CreateFolder, InMemoryFolderRepository]
+    ) -> None:
+        """Déplacer vers un parent corbeillé doit lever InvalidMoveError."""
+        move_folder, create_folder, _ = folder_setup
+        parent = create_folder.execute("parent")
+        parent.trashed = True
+        folder = create_folder.execute("enfant")
+
+        with pytest.raises(InvalidMoveError):
             move_folder.execute(folder_id=folder.id, new_parent_id=parent.id)
 
 

@@ -14,6 +14,7 @@ from minidrive.application.use_cases.upload_file import UploadFile
 from minidrive.domain.errors import (
     FileAlreadyExistsError,
     FolderAlreadyExistsError,
+    InTrashError,
     InvalidFileNameError,
     UnknownFileError,
     UnknownFolderError,
@@ -92,6 +93,15 @@ class TestRenameFolder:
 
         with pytest.raises(FolderAlreadyExistsError):
             rename_folder.execute(folder_id=folder.id, new_name="pris")
+
+    def test_rename_trashed_refused(self, folder_setup: tuple[RenameFolder, CreateFolder]) -> None:
+        """Renommer un dossier corbeillé doit lever InTrashError."""
+        rename_folder, create_folder = folder_setup
+        folder = create_folder.execute("vieux")
+        folder.trashed = True
+
+        with pytest.raises(InTrashError):
+            rename_folder.execute(folder_id=folder.id, new_name="neuf")
 
 
 class TestRenameFile:
