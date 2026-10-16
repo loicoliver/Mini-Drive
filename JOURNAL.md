@@ -7,10 +7,10 @@
 > **Règle d'équipe :** chaque tranche = 1 commit décrit ici (contexte, décisions,
 > fichiers). Mettre à jour ce journal fait partie de la tranche.
 
-## État actuel (16/10/2026, commit `7132740`, version 0.2.0)
+## État actuel (16/10/2026, version 0.2.0)
 
-- **12 commandes CLI** : `mkdir`, `ls`, `upload`, `download`, `rename`, `move`,
-  `trash`, `restore`, `rm`, `share`, `unshare`, `serve` (+ `--utilisateur` global)
+- **12 commandes CLI** : `mkdir`, `ls [--corbeille] [--limit/--offset]`, `upload`, `download`, `rename`, `move`,
+  `trash`, `restore`, `rm`, `share`, `unshare`, `quota`, `serve` (+ `--utilisateur` global)
 - **Interface graphique** : `minidrive serve --port 8000` puis http://127.0.0.1:8000/
 - **REST JSON** : `/api/health`, `/api/folders`, `/api/files`, `.../{id}/content`,
   rename (PATCH), move/trash/restore/share/unshare (POST), purge (DELETE),
@@ -19,8 +19,8 @@
   (stdlib uniquement, migrations idempotentes via `ensure_column`)
 - **Multi-utilisateurs** : `owner_id`, partages reader/editor, permissions
   effectives (owner tout, editor écrit, reader lit), quotas par utilisateur
-- **Qualité** : 255 tests, couverture ≥ 92 %, `ruff`, `mypy --strict`,
-  `lint-imports`, CI matrice Ubuntu/Windows/macOS + UTF-8 forcé
+- **Qualité** : 269 tests, couverture ≥ 92 %, `ruff`, `mypy --strict`,
+  `lint-imports`, CI matrice Ubuntu/Windows/macOS + UTF-8 forcé + job packaging wheel
 - **Zéro dépendance runtime** (stdlib uniquement)
 
 ## Commandes utiles
@@ -119,10 +119,19 @@ Squelette initial : couches domain/application/adapters/interfaces, `mkdir` en m
 - Leçon apprise : pluriels d'URL (`folders`) vs `node_type` (`folder`) → 404
   systématique, corrigé par mapping explicite + test anti-confusion
 
+### Correctif icône "+" (avec la tranche ci-dessous)
+- Le "+" multicolore avait des paths hors `viewBox` (`V-2`) → remplacé par le
+  "+" outline standard de la page (aucun aplat = aucun artefact possible)
+
+### Solde roadmap : `ls --corbeille`, parent à l'upload, quotas persistants, pagination, CI packaging
+- `ls --corbeille` + `ls --limit/--offset` (pagination après filtre permissions),
+  commande `quota`, `UploadFile` valide le parent (`UnknownFolderError`/`InTrashError`)
+- `DbBackedQuotaPolicy` : usage dérivé de la base (corbeille incluse), plafond via
+  `MINIDRIVE_QUOTA_BYTES`, suivi par utilisateur — le compteur mémoire de `Fixed`
+  ne survivait pas aux redémarrages CLI (bug attrapé avant commit)
+- Job CI `packaging` : build wheel + install + smoke `minidrive --help`/`ls` sur 3 OS
+
 ## Pistes suivantes (non commencées)
 
-1. **Validation du parent à l'upload** (aujourd'hui aucun contrôle d'existence/permission du parent)
-2. **`ls --corbeille`** (voir la corbeille ; aujourd'hui il faut garder les IDs)
-3. **Quotas par rôle** (`FixedQuotaPolicy` injectée par utilisateur au lieu d'`Unlimited` par défaut)
-4. **Pagination de `list_all`** (tout est chargé en mémoire)
-5. **Packaging vérifié depuis GitHub** (`pip install git+https://...` testé sur les 3 OS)
+1. **Aperçu des documents** (texte/image/PDF dans la page web — proposé par le collègue,
+   cadré : MIME par extension, garde taille ~2 Mo, SVG exclu/inline sandboxé)

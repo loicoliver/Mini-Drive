@@ -4,29 +4,38 @@ import pytest
 
 from minidrive.adapters.memory.blob_storage import InMemoryBlobStorage
 from minidrive.adapters.memory.file_repository import InMemoryFileRepository
+from minidrive.adapters.memory.folder_repository import InMemoryFolderRepository
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
 from minidrive.application.quota_policies import (
     FixedQuotaPolicy,
     QuotaPolicy,
     UnlimitedQuotaPolicy,
 )
+from minidrive.application.use_cases.create_folder import CreateFolder
 from minidrive.application.use_cases.upload_file import UploadFile
 from minidrive.application.users import DEFAULT_USER_ID
 from minidrive.domain.errors import (
     FileAlreadyExistsError,
+    InTrashError,
     InvalidFileNameError,
     QuotaExceededError,
+    UnknownFolderError,
 )
 
 
-def make_upload_file(quota_policy: QuotaPolicy | None = None) -> UploadFile:
-    """Fabrique un UploadFile câblé sur des adapteurs mémoire vierges."""
-    return UploadFile(
+def make_upload_file(
+    quota_policy: QuotaPolicy | None = None,
+) -> tuple[UploadFile, InMemoryFolderRepository]:
+    """Fabrique un UploadFile câblé sur des adapteurs mémoire vierges (+ dossiers)."""
+    folder_repository = InMemoryFolderRepository()
+    use_case = UploadFile(
         file_repository=InMemoryFileRepository(),
         blob_storage=InMemoryBlobStorage(),
         id_generator=UuidIdGenerator(),
         quota_policy=quota_policy or UnlimitedQuotaPolicy(),
+        folder_repository=folder_repository,
     )
+    return use_case, folder_repository
 
 
 class TestUploadFile:
@@ -34,7 +43,7 @@ class TestUploadFile:
 
     def test_upload_success(self) -> None:
         """Uploader un fichier doit persister métadonnées et contenu."""
-        use_case = make_upload_file()
+        use_case, _ = make_upload_file()
 
         file = use_case.execute(name="rapport.pdf", data=b"contenu")
 
@@ -51,6 +60,7 @@ class TestUploadFile:
             blob_storage=blob_storage,
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=InMemoryFolderRepository(),
         )
 
         file = use_case.execute(name="a.bin", data=b"\x00\x01\x02")
@@ -59,7 +69,7 @@ class TestUploadFile:
 
     def test_upload_empty_file(self) -> None:
         """Uploader un fichier vide doit fonctionner."""
-        use_case = make_upload_file()
+        use_case, _ = make_upload_file()
 
         file = use_case.execute(name="vide.txt", data=b"")
 
@@ -73,6 +83,7 @@ class TestUploadFile:
             blob_storage=blob_storage,
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=InMemoryFolderRepository(),
         )
 
         with pytest.raises(InvalidFileNameError):
@@ -80,7 +91,7 @@ class TestUploadFile:
 
     def test_upload_duplicate_name(self) -> None:
         """Deux fichiers même nom même parent doivent lever FileAlreadyExistsError."""
-        use_case = make_upload_file()
+        use_case, _ = make_upload_file()
         use_case.execute(name="doublon.txt", data=b"un")
 
         with pytest.raises(FileAlreadyExistsError) as exc_info:
@@ -90,12 +101,33 @@ class TestUploadFile:
 
     def test_upload_same_name_different_parent_allowed(self) -> None:
         """Même nom dans des parents différents doit être autorisé."""
-        use_case = make_upload_file()
+        use_case, folders = make_upload_file()
+        parent = CreateFolder(folder_repository=folders, id_generator=UuidIdGenerator()).execute(
+            "parent"
+        )
 
         file1 = use_case.execute(name="a.txt", data=b"1", parent_id=None)
-        file2 = use_case.execute(name="a.txt", data=b"2", parent_id="parent-1")
+        file2 = use_case.execute(name="a.txt", data=b"2", parent_id=parent.id)
 
         assert file1.id != file2.id
+
+    def test_upload_unknown_parent(self) -> None:
+        """Uploader dans un dossier inconnu doit lever UnknownFolderError."""
+        use_case, _ = make_upload_file()
+
+        with pytest.raises(UnknownFolderError):
+            use_case.execute(name="a.txt", data=b"1", parent_id="fantome")
+
+    def test_upload_trashed_parent_refused(self) -> None:
+        """Uploader dans un dossier corbeillé doit lever InTrashError."""
+        use_case, folders = make_upload_file()
+        parent = CreateFolder(folder_repository=folders, id_generator=UuidIdGenerator()).execute(
+            "parent"
+        )
+        parent.trashed = True
+
+        with pytest.raises(InTrashError):
+            use_case.execute(name="a.txt", data=b"1", parent_id=parent.id)
 
     def test_upload_quota_exceeded(self) -> None:
         """Un upload dépassant le quota doit lever QuotaExceededError sans stocker."""
@@ -106,6 +138,7 @@ class TestUploadFile:
             blob_storage=blob_storage,
             id_generator=UuidIdGenerator(),
             quota_policy=FixedQuotaPolicy(quota_bytes=10),
+            folder_repository=InMemoryFolderRepository(),
         )
 
         with pytest.raises(QuotaExceededError):
@@ -116,7 +149,7 @@ class TestUploadFile:
     def test_upload_records_quota_usage(self) -> None:
         """Un upload réussi doit décompter le quota (le suivant peut échouer)."""
         policy = FixedQuotaPolicy(quota_bytes=10)
-        use_case = make_upload_file(quota_policy=policy)
+        use_case, _ = make_upload_file(quota_policy=policy)
         use_case.execute(name="a.bin", data=b"12345678")
 
         assert policy.get_remaining_quota(DEFAULT_USER_ID) == 2
@@ -126,7 +159,7 @@ class TestUploadFile:
     def test_upload_uses_default_local_user(self) -> None:
         """Sans user_id explicite, l'utilisateur local est utilisé pour le quota."""
         policy = FixedQuotaPolicy(quota_bytes=5)
-        use_case = make_upload_file(quota_policy=policy)
+        use_case, _ = make_upload_file(quota_policy=policy)
         use_case.execute(name="a.bin", data=b"12345")
 
         assert policy.get_remaining_quota("local") == 0

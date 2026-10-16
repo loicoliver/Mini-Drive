@@ -45,6 +45,7 @@ def file_sharing() -> tuple[ShareFile, UnshareFile, UploadFile, InMemoryShareRep
             blob_storage=InMemoryBlobStorage(),
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=InMemoryFolderRepository(),
         ),
         share_repository,
     )

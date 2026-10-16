@@ -49,3 +49,13 @@ class TestListFolders:
             "images",
             "videos",
         ]
+
+    def test_list_trashed_only(self) -> None:
+        """trashed_only=True ne retourne que la corbeille."""
+        list_folders, create_folder = make_list_folders()
+        create_folder.execute("visible")
+        trashed = create_folder.execute("poubelle")
+        trashed.trashed = True
+
+        assert [f.name.value for f in list_folders.execute()] == ["visible"]
+        assert [f.name.value for f in list_folders.execute(trashed_only=True)] == ["poubelle"]

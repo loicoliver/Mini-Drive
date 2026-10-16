@@ -72,6 +72,7 @@ class TestEnforcement:
             blob_storage=blob_storage,
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=folder_repository,
         )
         file = upload_file.execute(name="a.txt", data=b"1", user_id="alice")
         share_folder = ShareFolder(

@@ -2,11 +2,15 @@
 
 import pytest
 
+from minidrive.adapters.memory.file_repository import InMemoryFileRepository
 from minidrive.application.quota_policies import (
+    DbBackedQuotaPolicy,
     FixedQuotaPolicy,
     QuotaPolicy,
     UnlimitedQuotaPolicy,
 )
+from minidrive.domain.entities import File
+from minidrive.domain.value_objects import FileName, FileSize
 
 
 class TestFixedQuotaPolicy:
@@ -63,6 +67,42 @@ class TestFixedQuotaPolicy:
         assert policy.get_remaining_quota("user1") == 1000
 
 
+class TestDbBackedQuotaPolicy:
+    """Tests de la politique persistante (usage dérivé de la base)."""
+
+    def test_usage_derived_from_repository(self) -> None:
+        """L'usage doit refléter les fichiers persistés, par propriétaire."""
+        repository = InMemoryFileRepository()
+        policy = DbBackedQuotaPolicy(quota_bytes=100, file_repository=repository)
+        repository.add(File.create(id="1", name=FileName("a"), size=FileSize(60), owner_id="alice"))
+        repository.add(File.create(id="2", name=FileName("b"), size=FileSize(10), owner_id="bob"))
+
+        assert policy.get_remaining_quota("alice") == 40
+        assert policy.get_remaining_quota("bob") == 90
+        assert policy.can_upload("alice", 40) is True
+        assert policy.can_upload("alice", 41) is False
+
+    def test_trash_counts_toward_quota(self) -> None:
+        """La corbeille compte dans le quota (comme Google Drive)."""
+        repository = InMemoryFileRepository()
+        policy = DbBackedQuotaPolicy(quota_bytes=100, file_repository=repository)
+        trashed = File.create(id="1", name=FileName("a"), size=FileSize(60))
+        trashed.trashed = True
+        repository.add(trashed)
+
+        assert policy.get_remaining_quota("local") == 40
+
+    def test_record_is_noop(self) -> None:
+        """record_* ne changent rien : la base fait foi."""
+        repository = InMemoryFileRepository()
+        policy = DbBackedQuotaPolicy(quota_bytes=100, file_repository=repository)
+
+        policy.record_upload("alice", 500)
+        policy.record_removal("alice", 200)
+
+        assert policy.get_remaining_quota("alice") == 100
+
+
 class TestUnlimitedQuotaPolicy:
     """Tests de la politique de quota illimité."""
 
@@ -105,9 +145,11 @@ class TestQuotaPolicyStrategy:
             assert hasattr(policy, "can_upload")
             assert hasattr(policy, "get_remaining_quota")
             assert hasattr(policy, "record_upload")
+            assert hasattr(policy, "record_removal")
             assert callable(policy.can_upload)
             assert callable(policy.get_remaining_quota)
             assert callable(policy.record_upload)
+            assert callable(policy.record_removal)
 
     def test_policies_are_interchangeable(self) -> None:
         """On peut remplacer une politique par une autre (principe L : Liskov)."""

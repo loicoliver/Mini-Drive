@@ -43,6 +43,7 @@ def file_setup() -> tuple[RenameFile, UploadFile]:
             blob_storage=InMemoryBlobStorage(),
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=InMemoryFolderRepository(),
         ),
     )
 

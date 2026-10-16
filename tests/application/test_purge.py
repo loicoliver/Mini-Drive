@@ -54,6 +54,7 @@ def purge_setup() -> tuple[
             blob_storage=blob_storage,
             id_generator=UuidIdGenerator(),
             quota_policy=policy,
+            folder_repository=folder_repository,
         ),
         folder_repository,
         file_repository,

@@ -39,6 +39,82 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "Drive vide." in captured.out
 
+    def test_ls_corbeille(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """ls --corbeille doit montrer les éléments corbeillés (et seulement eux)."""
+        main(["mkdir", "visible"])
+        main(["mkdir", "poubelle"])
+        capsys.readouterr()
+        main(["ls"])
+        out = capsys.readouterr().out
+        trashed_id = [line for line in out.splitlines() if "poubelle" in line][0]
+        trashed_id = trashed_id.split("ID: ")[1].split(")")[0]
+        capsys.readouterr()
+
+        main(["trash", trashed_id])
+        capsys.readouterr()
+
+        main(["ls", "--corbeille"])
+        corbeille_out = capsys.readouterr().out
+        assert "poubelle" in corbeille_out
+        assert "visible" not in corbeille_out
+
+        main(["ls"])
+        assert "poubelle" not in capsys.readouterr().out
+
+    def test_ls_corbeille_empty(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """ls --corbeille sur une corbeille vide doit l'annoncer."""
+        main(["ls", "--corbeille"])
+
+        assert "Corbeille vide." in capsys.readouterr().out
+
+    def test_ls_pagination(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """ls --limit/--offset doit paginer chaque section."""
+        main(["mkdir", "c"])
+        main(["mkdir", "b"])
+        main(["mkdir", "a"])
+        capsys.readouterr()
+
+        main(["ls", "--limit", "2"])
+        lines = [line for line in capsys.readouterr().out.splitlines() if line.startswith("  ")]
+        assert [line.split(" ")[2] for line in lines] == ["a", "b"]
+
+        main(["ls", "--limit", "1", "--offset", "2"])
+        lines = [line for line in capsys.readouterr().out.splitlines() if line.startswith("  ")]
+        assert [line.split(" ")[2] for line in lines] == ["c"]
+
+    def test_ls_invalid_pagination(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Des --limit/--offset négatifs doivent sortir en code 1."""
+        with pytest.raises(SystemExit) as exc_info:
+            main(["ls", "--limit", "-1"])
+        assert exc_info.value.code == 1
+        assert "positif" in capsys.readouterr().out
+
+        with pytest.raises(SystemExit) as exc_info:
+            main(["ls", "--offset", "-2"])
+        assert exc_info.value.code == 1
+
+    def test_quota_unlimited_by_default(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """quota sans plafond doit annoncer l'illimité."""
+        main(["quota"])
+
+        assert "illimité" in capsys.readouterr().out
+
+    def test_quota_fixed_counts_uploads(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """quota avec plafond doit décompter les uploads."""
+        monkeypatch.setenv("MINIDRIVE_QUOTA_BYTES", "100")
+        main(["quota"])
+        assert "100 octets" in capsys.readouterr().out
+
+        source = tmp_path / "a.txt"
+        source.write_bytes(b"1234567890")
+        main(["upload", str(source)])
+        capsys.readouterr()
+
+        main(["quota"])
+        assert "90 octets" in capsys.readouterr().out
+
     def test_ls_lists_folders_sorted(self, capsys: pytest.CaptureFixture[str]) -> None:
         """ls doit afficher les dossiers créés, triés par nom."""
         main(["mkdir", "videos"])

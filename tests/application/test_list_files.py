@@ -2,6 +2,7 @@
 
 from minidrive.adapters.memory.blob_storage import InMemoryBlobStorage
 from minidrive.adapters.memory.file_repository import InMemoryFileRepository
+from minidrive.adapters.memory.folder_repository import InMemoryFolderRepository
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
 from minidrive.adapters.memory.share_repository import InMemoryShareRepository
 from minidrive.application.quota_policies import UnlimitedQuotaPolicy
@@ -19,6 +20,7 @@ def make_list_files() -> tuple[ListFiles, UploadFile]:
             blob_storage=InMemoryBlobStorage(),
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=InMemoryFolderRepository(),
         ),
     )
 

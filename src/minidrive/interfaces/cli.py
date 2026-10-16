@@ -67,10 +67,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mkdir_parser.add_argument("nom", help="Nom du dossier à créer")
 
-    subparsers.add_parser(
+    ls_parser = subparsers.add_parser(
         "ls",
         help="Lister dossiers et fichiers",
         description="Lister tous les dossiers et fichiers, triés par nom.",
+    )
+    ls_parser.add_argument(
+        "--corbeille",
+        action="store_true",
+        help="Afficher uniquement la corbeille",
+    )
+    ls_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Nombre max de résultats par section",
+    )
+    ls_parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Nombre de résultats à sauter par section",
     )
 
     upload_parser = subparsers.add_parser(
@@ -150,6 +167,12 @@ def build_parser() -> argparse.ArgumentParser:
     unshare_parser.add_argument("id", help="Identifiant du dossier ou fichier")
     unshare_parser.add_argument("utilisateur", help="Utilisateur à retirer")
 
+    subparsers.add_parser(
+        "quota",
+        help="Afficher le quota restant",
+        description="Afficher le quota restant de l'utilisateur agissant.",
+    )
+
     serve_parser = subparsers.add_parser(
         "serve",
         help="Démarrer le serveur HTTP",
@@ -185,10 +208,23 @@ def main(argv: list[str] | None = None) -> None:
             folder = container.create_folder.execute(name=folder_name, owner_id=acting_user)
             print(f"✓ Dossier '{folder.name}' créé avec succès (ID: {folder.id})")
         elif args.command == "ls":
-            folders = container.list_folders.execute(user_id=acting_user)
-            files = container.list_files.execute(user_id=acting_user)
+            trashed_only: bool = bool(args.corbeille)
+            limit: int | None = args.limit
+            offset: int = int(args.offset)
+            if limit is not None and limit < 0:
+                print("✗ Erreur: --limit doit être positif")
+                sys.exit(1)
+            if offset < 0:
+                print("✗ Erreur: --offset doit être positif")
+                sys.exit(1)
+            folders = container.list_folders.execute(
+                user_id=acting_user, trashed_only=trashed_only, limit=limit, offset=offset
+            )
+            files = container.list_files.execute(
+                user_id=acting_user, trashed_only=trashed_only, limit=limit, offset=offset
+            )
             if not folders and not files:
-                print("Drive vide.")
+                print("Corbeille vide." if trashed_only else "Drive vide.")
                 return
             if folders:
                 print("Dossiers :")
@@ -295,6 +331,12 @@ def main(argv: list[str] | None = None) -> None:
                     file_id=node_id, user_id=target_user, owner_id=acting_user
                 )
             print(f"✓ Partage retiré pour '{target_user}'")
+        elif args.command == "quota":
+            remaining = container.quota_policy.get_remaining_quota(acting_user)
+            if remaining < 0:
+                print(f"Quota illimité pour '{acting_user}'.")
+            else:
+                print(f"Quota restant pour '{acting_user}' : {remaining} octets.")
         elif args.command == "serve":
             from minidrive.interfaces.rest_api import build_server
 

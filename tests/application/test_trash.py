@@ -39,6 +39,7 @@ def file_setup() -> tuple[TrashFile, RestoreFile, UploadFile, InMemoryFileReposi
             blob_storage=InMemoryBlobStorage(),
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=InMemoryFolderRepository(),
         ),
         repository,
     )

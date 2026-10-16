@@ -63,8 +63,10 @@ pip install -e ".[dev]"
 # Créer un dossier
 minidrive mkdir documents
 
-# Lister les dossiers
+# Lister dossiers et fichiers (triés, paginés, corbeille visible sur demande)
 minidrive ls
+minidrive ls --corbeille
+minidrive ls --limit 10 --offset 20
 
 # Uploader un fichier
 minidrive upload ./rapport.pdf
@@ -90,6 +92,10 @@ minidrive unshare <id> bob
 # Agir en tant qu'un autre utilisateur
 minidrive --utilisateur alice mkdir docs-projets
 # ou : MINIDRIVE_USER=alice minidrive mkdir docs-projets
+
+# Plafonner le quota (octets, suivi par utilisateur, corbeille incluse)
+MINIDRIVE_QUOTA_BYTES=1000000 minidrive upload gros-fichier.bin
+minidrive quota
 
 # Démarrer le serveur HTTP (mêmes use cases que la CLI, zéro dépendance)
 minidrive serve --port 8000
@@ -134,7 +140,7 @@ pytest --cov=minidrive --cov-fail-under=85
 
 **Phase 0 (tranche verticale témoin)** :
 - ✅ Créer un dossier (`minidrive mkdir <nom>`)
-- ✅ Lister dossiers et fichiers (`minidrive ls`, triés par nom)
+- ✅ Lister (`ls [--corbeille] [--limit N] [--offset M]`, dossiers + fichiers triés)
 - ✅ Uploader un fichier (`minidrive upload <chemin>`, contenu copié sous `~/.minidrive/blobs/`)
 - ✅ Télécharger un fichier (`minidrive download <id> [--vers <chemin>]`)
 - ✅ Renommer (`minidrive rename <id> <nom>`, dossiers et fichiers)
@@ -149,10 +155,10 @@ pytest --cov=minidrive --cov-fail-under=85
 - ✅ Validation des noms (pas vide, pas de `/`, max 255 caractères)
 - ✅ Détection des doublons
 - ✅ Persistance locale SQLite (`~/.minidrive/minidrive.db`, stdlib uniquement, cross-platform)
-- ✅ Quotas branchés sur l'upload (mono-utilisateur `local`, `UnlimitedQuotaPolicy` par défaut)
+- ✅ Quotas persistants (`MINIDRIVE_QUOTA_BYTES`, suivi par utilisateur, `quota`)
 
 **Fonctionnalités prévues (MVP ultérieur)** :
-- Gestion des quotas par utilisateur (limites par rôle via `FixedQuotaPolicy`)
+- Aperçu des documents (texte/image/PDF dans la page web)
 
 ## 🧪 Tests
 

@@ -66,6 +66,32 @@ class TestBootstrap:
         with pytest.raises(QuotaExceededError):
             container.upload_file.execute(name="ko.txt", data=b"12345")
 
+    def test_container_quota_from_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MINIDRIVE_QUOTA_BYTES doit activer un plafond suivi par utilisateur."""
+        db_path = tmp_path / "test.db"
+        monkeypatch.setenv("MINIDRIVE_DB", str(db_path))
+        monkeypatch.setenv("MINIDRIVE_QUOTA_BYTES", "10")
+
+        alice = create_container()
+        alice.upload_file.execute(name="a.txt", data=b"12345678", user_id="alice")
+
+        assert alice.quota_policy.get_remaining_quota("alice") == 2
+        assert alice.quota_policy.get_remaining_quota("bob") == 10
+        with pytest.raises(QuotaExceededError):
+            alice.upload_file.execute(name="b.txt", data=b"123", user_id="alice")
+
+    def test_container_invalid_quota_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MINIDRIVE_QUOTA_BYTES non entier doit échouer explicitement."""
+        monkeypatch.setenv("MINIDRIVE_DB", str(tmp_path / "test.db"))
+        monkeypatch.setenv("MINIDRIVE_QUOTA_BYTES", "beaucoup")
+
+        with pytest.raises(ValueError, match="MINIDRIVE_QUOTA_BYTES invalide"):
+            create_container()
+
     def test_container_provides_rename_and_move(self, tmp_path: Path) -> None:
         """Le conteneur doit fournir les use cases rename/move, câblés ensemble."""
         container = create_container(db_path=tmp_path / "test.db")

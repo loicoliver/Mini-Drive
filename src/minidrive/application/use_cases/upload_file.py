@@ -1,10 +1,20 @@
 """Use case pour uploader un fichier (pattern Use Case / Command)."""
 
-from minidrive.application.ports import BlobStorage, FileRepository, IdGenerator
+from minidrive.application.ports import (
+    BlobStorage,
+    FileRepository,
+    FolderRepository,
+    IdGenerator,
+)
 from minidrive.application.quota_policies import QuotaPolicy
 from minidrive.application.users import DEFAULT_USER_ID
 from minidrive.domain.entities import File
-from minidrive.domain.errors import FileAlreadyExistsError, QuotaExceededError
+from minidrive.domain.errors import (
+    FileAlreadyExistsError,
+    InTrashError,
+    QuotaExceededError,
+    UnknownFolderError,
+)
 from minidrive.domain.value_objects import FileName, FileSize
 
 
@@ -24,6 +34,7 @@ class UploadFile:
         blob_storage: BlobStorage,
         id_generator: IdGenerator,
         quota_policy: QuotaPolicy,
+        folder_repository: FolderRepository,
     ) -> None:
         """Injection de dépendances par constructeur.
 
@@ -32,11 +43,13 @@ class UploadFile:
             blob_storage: Port pour le stockage du contenu binaire
             id_generator: Port pour la génération d'identifiants
             quota_policy: Politique de quota applicable (pattern Strategy)
+            folder_repository: Port pour vérifier le dossier parent
         """
         self._file_repository = file_repository
         self._blob_storage = blob_storage
         self._id_generator = id_generator
         self._quota_policy = quota_policy
+        self._folder_repository = folder_repository
 
     def execute(
         self,
@@ -58,12 +71,22 @@ class UploadFile:
 
         Raises:
             InvalidFileNameError: Si le nom est invalide
+            UnknownFolderError: Si le dossier parent est inconnu
+            InTrashError: Si le dossier parent est corbeillé
             FileAlreadyExistsError: Si un fichier avec ce nom existe déjà
             QuotaExceededError: Si le quota de l'utilisateur est dépassé
         """
         # Validation du nom et de la taille (déléguées aux value objects)
         file_name = FileName(name)
         file_size = FileSize(len(data))
+
+        # Le parent doit exister et ne pas être corbeillé (pas d'orphelins)
+        if parent_id is not None:
+            parent = self._folder_repository.get(parent_id)
+            if parent is None:
+                raise UnknownFolderError(parent_id)
+            if parent.trashed:
+                raise InTrashError(parent_id)
 
         # Vérification de l'unicité
         if self._file_repository.exists_with_name(name, parent_id):

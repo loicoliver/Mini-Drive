@@ -49,6 +49,7 @@ def file_setup() -> tuple[MoveFile, UploadFile, CreateFolder]:
             blob_storage=InMemoryBlobStorage(),
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=folder_repository,
         ),
         CreateFolder(folder_repository=folder_repository, id_generator=UuidIdGenerator()),
     )

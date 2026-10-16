@@ -4,6 +4,7 @@ import pytest
 
 from minidrive.adapters.memory.blob_storage import InMemoryBlobStorage
 from minidrive.adapters.memory.file_repository import InMemoryFileRepository
+from minidrive.adapters.memory.folder_repository import InMemoryFolderRepository
 from minidrive.adapters.memory.id_generator import UuidIdGenerator
 from minidrive.adapters.memory.share_repository import InMemoryShareRepository
 from minidrive.application.quota_policies import UnlimitedQuotaPolicy
@@ -27,6 +28,7 @@ def make_download_file() -> tuple[DownloadFile, UploadFile]:
             blob_storage=blob_storage,
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=InMemoryFolderRepository(),
         ),
     )
 
@@ -76,6 +78,7 @@ class TestDownloadFile:
             blob_storage=InMemoryBlobStorage(),  # autre stockage : blob absent
             id_generator=UuidIdGenerator(),
             quota_policy=UnlimitedQuotaPolicy(),
+            folder_repository=InMemoryFolderRepository(),
         )
         uploaded = upload_file.execute(name="orphelin.txt", data=b"x")
 

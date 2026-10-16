@@ -13,7 +13,11 @@ from minidrive.adapters.sqlite.file_repository import SqliteFileRepository
 from minidrive.adapters.sqlite.folder_repository import SqliteFolderRepository
 from minidrive.adapters.sqlite.share_repository import SqliteShareRepository
 from minidrive.application.ports import FileRepository, FolderRepository
-from minidrive.application.quota_policies import QuotaPolicy, UnlimitedQuotaPolicy
+from minidrive.application.quota_policies import (
+    DbBackedQuotaPolicy,
+    QuotaPolicy,
+    UnlimitedQuotaPolicy,
+)
 from minidrive.application.use_cases.create_folder import CreateFolder
 from minidrive.application.use_cases.download_file import DownloadFile
 from minidrive.application.use_cases.list_files import ListFiles
@@ -45,6 +49,20 @@ def resolve_db_path() -> Path:
     return DEFAULT_DB_PATH
 
 
+def resolve_quota_bytes() -> int | None:
+    """Résout le plafond de quota (None = illimité).
+
+    Source : MINIDRIVE_QUOTA_BYTES (entier d'octets). Erreur explicite si invalide.
+    """
+    raw = os.environ.get("MINIDRIVE_QUOTA_BYTES")
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise ValueError(f"MINIDRIVE_QUOTA_BYTES invalide : {raw!r} (entier attendu)") from exc
+
+
 class Container:
     """Conteneur d'injection de dépendances simplifié."""
 
@@ -57,7 +75,7 @@ class Container:
 
         Args:
             db_path: Chemin SQLite explicite (tests). Si None, resolve_db_path().
-            quota_policy: Politique de quota (UnlimitedQuotaPolicy par défaut).
+            quota_policy: Politique de quota (sinon MINIDRIVE_QUOTA_BYTES ou illimité).
         """
         self._db_path = Path(db_path) if db_path is not None else resolve_db_path()
         # Adapteurs (implémentations concrètes)
@@ -66,7 +84,16 @@ class Container:
         self._share_repository = SqliteShareRepository(self._db_path)
         self._blob_storage = FilesystemBlobStorage(self._db_path.parent / "blobs")
         self._id_generator = UuidIdGenerator()
-        self._quota_policy = quota_policy or UnlimitedQuotaPolicy()
+        # Quota : explicite (tests), sinon plafond env adossé à la base, sinon illimité
+        if quota_policy is not None:
+            self._quota_policy = quota_policy
+        else:
+            quota_bytes = resolve_quota_bytes()
+            self._quota_policy = (
+                DbBackedQuotaPolicy(quota_bytes=quota_bytes, file_repository=self._file_repository)
+                if quota_bytes is not None
+                else UnlimitedQuotaPolicy()
+            )
 
         # Use cases (injection par constructeur)
         self._create_folder_use_case = CreateFolder(
@@ -82,6 +109,7 @@ class Container:
             blob_storage=self._blob_storage,
             id_generator=self._id_generator,
             quota_policy=self._quota_policy,
+            folder_repository=self._folder_repository,
         )
         self._list_files_use_case = ListFiles(
             file_repository=self._file_repository,
@@ -169,6 +197,11 @@ class Container:
     def file_repository(self) -> FileRepository:
         """Accès au repository fichiers (get inclut la corbeille)."""
         return self._file_repository
+
+    @property
+    def quota_policy(self) -> QuotaPolicy:
+        """Accès à la politique de quota configurée."""
+        return self._quota_policy
 
     @property
     def create_folder(self) -> CreateFolder:
